@@ -110,6 +110,53 @@ TRANSLATIONS = {
         "en": "Unpaid/partial rent this month",
         "es": "Renta sin pagar/parcial este mes",
     },
+    TRANSLATIONS = {
+    # ...existing keys...
+
+    "hello": {"en": "Hello", "es": "Hola"},
+
+    "landlord_manage_tenants": {
+        "en": "Manage tenants",
+        "es": "Gestionar inquilinos",
+    },
+    "landlord_manage_leases": {
+        "en": "Manage leases",
+        "es": "Gestionar contratos",
+    },
+    "landlord_all_requests": {
+        "en": "All maintenance requests",
+        "es": "Todas las solicitudes de mantenimiento",
+    },
+    "landlord_rent_status_for": {
+        "en": "Rent status for",
+        "es": "Estado de la renta de",
+    },
+    "landlord_recent_requests": {
+        "en": "Recent maintenance requests",
+        "es": "Solicitudes de mantenimiento recientes",
+    },
+    "landlord_no_leases": {
+        "en": "No active leases found.",
+        "es": "No se encontraron contratos activos.",
+    },
+    "landlord_no_requests": {
+        "en": "No maintenance requests yet.",
+        "es": "Aún no hay solicitudes de mantenimiento.",
+    },
+
+    # Column/header labels
+    "col_tenant": {"en": "Tenant", "es": "Inquilino"},
+    "col_monthly_rent": {"en": "Monthly rent", "es": "Renta mensual"},
+    "col_due_day": {"en": "Due day", "es": "Día de vencimiento"},
+    "col_paid_this_month": {"en": "Paid this month", "es": "Pagado este mes"},
+    "col_status": {"en": "Status", "es": "Estado"},
+    "col_created": {"en": "Created", "es": "Creado"},
+    "col_title": {"en": "Title", "es": "Título"},
+    "col_description": {"en": "Description", "es": "Descripción"},
+    "col_update": {"en": "Update", "es": "Actualizar"},
+    "btn_save": {"en": "Save", "es": "Guardar"},
+}
+
 }
 
 def get_lang():
