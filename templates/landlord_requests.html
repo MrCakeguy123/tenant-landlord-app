@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
   <section class="card">
-    <h1>Maintenance requests</h1>
+    <h1>{{ t('landlord_all_requests') }}</h1>
     <p>
       <a class="button" href="{{ url_for('landlord_dashboard') }}">Back to dashboard</a>
     </p>
@@ -10,12 +10,12 @@
       <table class="table">
         <thead>
           <tr>
-            <th>Created</th>
-            <th>Tenant</th>
-            <th>Title</th>
-            <th>Description</th>
-            <th>Status</th>
-            <th>Update</th>
+            <th>{{ t('col_created') }}</th>
+            <th>{{ t('col_tenant') }}</th>
+            <th>{{ t('col_title') }}</th>
+            <th>{{ t('col_description') }}</th>
+            <th>{{ t('col_status') }}</th>
+            <th>{{ t('col_update') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -32,7 +32,18 @@
                   {{ r.description }}
                 {% endif %}
               </td>
-              <td>{{ r.status }}</td>
+              <td>
+                {% if r.status == 'Open' %}
+                  {% set m_class = 'open' %}
+                {% elif r.status == 'In progress' %}
+                  {% set m_class = 'in-progress' %}
+                {% else %}
+                  {% set m_class = 'completed' %}
+                {% endif %}
+                <span class="status-badge status-{{ m_class }}">
+                  {{ r.status }}
+                </span>
+              </td>
               <td>
                 <form method="post" action="{{ url_for('landlord_update_request_status', request_id=r.id) }}">
                   <select name="status">
@@ -40,7 +51,7 @@
                     <option value="In progress" {% if r.status == 'In progress' %}selected{% endif %}>In progress</option>
                     <option value="Completed" {% if r.status == 'Completed' %}selected{% endif %}>Completed</option>
                   </select>
-                  <button class="button small" type="submit">Save</button>
+                  <button class="button small" type="submit">{{ t('btn_save') }}</button>
                 </form>
               </td>
             </tr>
@@ -48,7 +59,7 @@
         </tbody>
       </table>
     {% else %}
-      <p>No maintenance requests yet.</p>
+      <p>{{ t('landlord_no_requests') }}</p>
     {% endif %}
   </section>
 {% endblock %}
