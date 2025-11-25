@@ -1,22 +1,65 @@
 {% extends "base.html" %}
 {% block content %}
-  <section class="card center">
+  <section class="card">
     <h1>Initial setup</h1>
-    <p class="subtitle">Create the first landlord account for this system.</p>
-    <form method="post" class="form">
-      <label>
-        Full name
-        <input type="text" name="full_name">
-      </label>
-      <label>
-        Username
-        <input type="text" name="username" required>
-      </label>
-      <label>
-        Password
-        <input type="password" name="password" required>
-      </label>
-      <button class="button primary" type="submit">Create landlord</button>
+    <p>Create a landlord, a tenant, and the first lease.</p>
+
+    <form method="post" action="{{ url_for('setup') }}" class="form form-grid">
+      <div class="form-column">
+        <h2>Landlord</h2>
+        <label>
+          Username
+          <input type="text" name="landlord_username" required>
+        </label>
+        <label>
+          Password
+          <input type="password" name="landlord_password" required>
+        </label>
+        <label>
+          Full name
+          <input type="text" name="landlord_full_name">
+        </label>
+        <label>
+          Email
+          <input type="email" name="landlord_email">
+        </label>
+      </div>
+
+      <div class="form-column">
+        <h2>Tenant</h2>
+        <label>
+          Username
+          <input type="text" name="tenant_username" required>
+        </label>
+        <label>
+          Password
+          <input type="password" name="tenant_password" required>
+        </label>
+        <label>
+          Full name
+          <input type="text" name="tenant_full_name">
+        </label>
+        <label>
+          Email
+          <input type="email" name="tenant_email">
+        </label>
+      </div>
+
+      <div class="form-column">
+        <h2>Lease</h2>
+        <label>
+          Monthly rent
+          <input type="number" step="0.01" name="monthly_rent" required>
+        </label>
+        <label>
+          Due day of month
+          <input type="number" name="due_day" min="1" max="31" required>
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <button class="button primary" type="submit">Complete setup</button>
+      </div>
     </form>
   </section>
 {% endblock %}
