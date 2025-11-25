@@ -2,21 +2,22 @@
 {% block content %}
   <section class="card">
     <h1>Hello, {{ user.full_name or user.username }}</h1>
-    <p class="subtitle">Landlord dashboard</p>
+    <p class="subtitle">{{ t('landlord_dashboard_title') }}</p>
 
     <p>
       <a class="button" href="{{ url_for('landlord_tenants') }}">Manage tenants</a>
       <a class="button" href="{{ url_for('landlord_leases') }}">Manage leases</a>
+      <a class="button" href="{{ url_for('landlord_requests') }}">All maintenance requests</a>
     </p>
 
     <div class="summary-row">
       <div class="summary-card">
-        <div class="summary-label">Open maintenance requests</div>
+        <div class="summary-label">{{ t('landlord_open_requests') }}</div>
         <div class="summary-value">{{ open_count }}</div>
       </div>
 
       <div class="summary-card">
-        <div class="summary-label">Unpaid/partial rent this month</div>
+        <div class="summary-label">{{ t('landlord_unpaid_rent') }}</div>
         <div class="summary-value">{{ unpaid_count }}</div>
       </div>
     </div>
@@ -54,7 +55,7 @@
   </section>
 
   <section class="card">
-    <h2>Maintenance requests</h2>
+    <h2>Recent maintenance requests</h2>
 
     {% if requests %}
       <table class="table">
@@ -74,10 +75,16 @@
               <td>{{ r.created_at }}</td>
               <td>{{ r.tenant_name or r.tenant_username }}</td>
               <td>{{ r.title }}</td>
-              <td>{{ r.description }}</td>
+              <td>
+                {% if current_lang == 'es' and r.translated_description %}
+                  {{ r.translated_description }}<br>
+                  <small>({{ r.description }})</small>
+                {% else %}
+                  {{ r.description }}
+                {% endif %}
+              </td>
               <td>{{ r.status }}</td>
               <td>
-                <!-- updated endpoint + param name -->
                 <form method="post" action="{{ url_for('landlord_update_request_status', request_id=r.id) }}">
                   <select name="status">
                     <option value="Open" {% if r.status == 'Open' %}selected{% endif %}>Open</option>
