@@ -1,12 +1,14 @@
 {% extends "base.html" %}
 {% block content %}
-  <section class="card center">
+  <section class="card">
     <h1>Welcome</h1>
-    <p class="subtitle">Simple web app for tenants and landlords.</p>
-    <p><a class="button primary" href="{{ url_for('login') }}">Log in</a></p>
-    <p class="hint">
-      If this is a brand-new install and you have no users yet,
-      visit <code>/setup</code> to create the first landlord account.
+    <p>This is a simple tenant/landlord app.</p>
+    <p>
+      <a class="button primary" href="{{ url_for('login') }}">Log in</a>
+    </p>
+    <p>
+      If you haven't set things up yet, go to
+      <a href="{{ url_for('setup') }}">setup</a>.
     </p>
   </section>
 {% endblock %}
