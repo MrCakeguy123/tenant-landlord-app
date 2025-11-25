@@ -2,24 +2,24 @@
 {% block content %}
   <section class="card">
     <h1>Hello, {{ user.full_name or user.username }}</h1>
-    <p class="subtitle">Tenant dashboard</p>
+    <p class="subtitle">{{ t('tenant_dashboard_title') }}</p>
 
-    <h2>Rent for {{ rent_month_label }}</h2>
     {% if lease %}
+      <h2>{{ t('tenant_rent_for_month') }} {{ rent_month_label }}</h2>
       <p>
-        Monthly rent:
+        {{ t('tenant_monthly_rent') }}:
         <strong>${{ '%.2f'|format(lease.monthly_rent or 0) }}</strong>
         (due on day {{ lease.due_day }} each month)
       </p>
       <p>
-        This month paid:
+        {{ t('tenant_this_month_paid') }}:
         <strong>${{ '%.2f'|format(rent_paid or 0) }}</strong>
         /
         <strong>${{ '%.2f'|format(lease.monthly_rent or 0) }}</strong>
       </p>
-      <p>Status: <strong>{{ rent_status }}</strong></p>
+      <p>{{ t('tenant_status') }}: <strong>{{ rent_status }}</strong></p>
 
-      <h3>Record a rent payment</h3>
+      <h3>{{ t('tenant_record_payment') }}</h3>
       <form method="post" action="{{ url_for('tenant_pay_rent') }}" class="form">
         <label>
           Amount
@@ -43,12 +43,12 @@
         <button class="button primary" type="submit">Record payment</button>
       </form>
 
-      <h3>Pay rent online (card)</h3>
+      <h3>{{ t('tenant_pay_online_heading') }}</h3>
       <form method="post" action="{{ url_for('tenant_stripe_checkout') }}" class="form">
         <p>
           You will be redirected to a secure payment page to pay the remaining balance for this month.
         </p>
-        <button class="button primary" type="submit">Pay with card (Stripe)</button>
+        <button class="button primary" type="submit">{{ t('tenant_pay_online_button') }}</button>
       </form>
 
       <h3>Recent rent payments</h3>
