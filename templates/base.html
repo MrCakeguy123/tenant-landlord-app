@@ -5,31 +5,78 @@
   <title>Tenant/Landlord App</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Minimal styling just for the top bar; keeps your existing card styling intact -->
+  <style>
+    .topbar {
+      background: #ffffff;
+      border-bottom: 1px solid #e5e7eb;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+    .topbar-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .topbar-left .brand {
+      font-weight: 600;
+      font-size: 1.1rem;
+      text-decoration: none;
+      color: #111827;
+    }
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .lang-switch {
+      display: inline-flex;
+      gap: 0.25rem;
+      margin-left: 0.75rem;
+    }
+  </style>
 </head>
 <body>
   <header class="topbar">
     <div class="topbar-inner">
       <div class="topbar-left">
-        <a href="{{ url_for('index') }}" class="brand">{{ t('nav_home') }}</a>
+        <!-- Brand just goes to dashboard if logged in, otherwise to index -->
+        <a
+          href="{{ url_for('dashboard') if session.get('user_id') else url_for('index') }}"
+          class="brand"
+        >
+          Tenant / Landlord
+        </a>
       </div>
+
       <div class="topbar-right">
         {% if session.get('user_id') %}
-          <a href="{{ url_for('dashboard') }}">Dashboard</a>
-          <a href="{{ url_for('logout') }}">{{ t('nav_logout') }}</a>
+          <!-- Single clear primary action: Dashboard + Logout -->
+          <a class="button small" href="{{ url_for('dashboard') }}">{{ t('nav_dashboard') }}</a>
+          <a class="button small" href="{{ url_for('logout') }}">{{ t('nav_logout') }}</a>
         {% else %}
-          <a href="{{ url_for('login') }}">{{ t('nav_login') }}</a>
+          <a class="button primary small" href="{{ url_for('login') }}">{{ t('nav_login') }}</a>
         {% endif %}
 
-        <span class="lang-switch">
+        <!-- Language toggle as pill buttons -->
+        <div class="lang-switch">
           {% if current_lang == 'en' %}
-            <strong>EN</strong> · <a href="{{ url_for('set_language', lang='es') }}">ES</a>
+            <span class="button small primary">EN</span>
+            <a class="button small" href="{{ url_for('set_language', lang='es') }}">ES</a>
           {% else %}
-            <a href="{{ url_for('set_language', lang='en') }}">EN</a> · <strong>ES</strong>
+            <a class="button small" href="{{ url_for('set_language', lang='en') }}">EN</a>
+            <span class="button small primary">ES</span>
           {% endif %}
-        </span>
+        </div>
       </div>
     </div>
-  </header>
+    </header>
 
   <main class="container">
     {% with messages = get_flashed_messages(with_categories=true) %}
