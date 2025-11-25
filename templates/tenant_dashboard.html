@@ -43,6 +43,14 @@
         <button class="button primary" type="submit">Record payment</button>
       </form>
 
+      <h3>Pay rent online (card)</h3>
+      <form method="post" action="{{ url_for('tenant_stripe_checkout') }}" class="form">
+        <p>
+          You will be redirected to a secure payment page to pay the remaining balance for this month.
+        </p>
+        <button class="button primary" type="submit">Pay with card (Stripe)</button>
+      </form>
+
       <h3>Recent rent payments</h3>
       {% if recent_payments %}
         <table class="table">
@@ -63,8 +71,8 @@
                 <td>${{ '%.2f'|format(p.amount or 0) }}</td>
                 <td>{{ p.month }}</td>
                 <td>{{ p.year }}</td>
-                <td>{{ p.method }}</td>
-                <td>{{ p.note }}</td>
+                <td>{{ p.method or 'N/A' }}</td>
+                <td>{{ p.note or '' }}</td>
               </tr>
             {% endfor %}
           </tbody>
@@ -73,16 +81,13 @@
         <p>No rent payments recorded yet.</p>
       {% endif %}
     {% else %}
-      <p>No active lease found. Please contact your landlord.</p>
+      <p>You do not have an active lease. Please contact your landlord.</p>
     {% endif %}
+  </section>
 
-    <hr class="section-divider">
-
-    <p>
-      <a class="button primary" href="{{ url_for('new_request') }}">New maintenance request</a>
-    </p>
-
-    <h2>Your maintenance requests</h2>
+  <section class="card">
+    <h2>Maintenance requests</h2>
+    <p><a class="button primary" href="{{ url_for('new_request') }}">Submit a new request</a></p>
     {% if requests %}
       <table class="table">
         <thead>
