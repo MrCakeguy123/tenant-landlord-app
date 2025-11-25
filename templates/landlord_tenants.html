@@ -2,25 +2,26 @@
 {% block content %}
   <section class="card">
     <h1>Tenants</h1>
-    <p class="subtitle">Manage tenant accounts</p>
-
     <p>
-      <a class="button primary" href="{{ url_for('landlord_new_tenant') }}">Add new tenant</a>
+      <a class="button" href="{{ url_for('landlord_dashboard') }}">Back to dashboard</a>
+      <a class="button primary" href="{{ url_for('landlord_new_tenant') }}">New tenant</a>
     </p>
 
     {% if tenants %}
       <table class="table">
         <thead>
           <tr>
-            <th>Full name</th>
             <th>Username</th>
+            <th>Full name</th>
+            <th>Email</th>
           </tr>
         </thead>
         <tbody>
           {% for t in tenants %}
             <tr>
-              <td>{{ t.full_name or t.username }}</td>
               <td>{{ t.username }}</td>
+              <td>{{ t.full_name or '' }}</td>
+              <td>{{ t.email or '' }}</td>
             </tr>
           {% endfor %}
         </tbody>
