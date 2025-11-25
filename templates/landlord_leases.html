@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="card">
+    <h1>Leases</h1>
+    <p class="subtitle">Manage leases and rent</p>
+
+    <p>
+      <a class="button primary" href="{{ url_for('landlord_new_lease') }}">Create new lease</a>
+    </p>
+
+    {% if leases %}
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Tenant</th>
+            <th>Monthly rent</th>
+            <th>Due day</th>
+            <th>Start date</th>
+            <th>End date</th>
+            <th>Active</th>
+            <th>Edit</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for l in leases %}
+            <tr>
+              <td>{{ l.tenant_name or l.tenant_username }}</td>
+              <td>${{ '%.2f'|format(l.monthly_rent or 0) }}</td>
+              <td>{{ l.due_day }}</td>
+              <td>{{ l.start_date or '-' }}</td>
+              <td>{{ l.end_date or '-' }}</td>
+              <td>{{ 'Yes' if l.is_active else 'No' }}</td>
+              <td>
+                <a class="button small" href="{{ url_for('landlord_edit_lease', lease_id=l.id) }}">Edit</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No leases yet.</p>
+    {% endif %}
+  </section>
+{% endblock %}

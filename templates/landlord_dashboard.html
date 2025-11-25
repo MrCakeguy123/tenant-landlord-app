@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="card">
+    <h1>Hello, {{ user.full_name or user.username }}</h1>
+    <p class="subtitle">Landlord dashboard</p>
+
+    <p>
+      <a class="button" href="{{ url_for('landlord_tenants') }}">Manage tenants</a>
+      <a class="button" href="{{ url_for('landlord_leases') }}">Manage leases</a>
+    </p>
+
+    <div class="summary-row">
+      <div class="summary-card">
+        <div class="summary-label">Open maintenance requests</div>
+        <div class="summary-value">{{ open_count }}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Leases unpaid/partial this month</div>
+        <div class="summary-value">{{ unpaid_count }}</div>
+      </div>
+    </div>
+
+    <h2>Rent status for {{ rent_month_label }}</h2>
+    {% if rent_overview %}
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Tenant</th>
+            <th>Monthly rent</th>
+            <th>Due day</th>
+            <th>Paid this month</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rent_overview %}
+            <tr>
+              <td>{{ row.tenant_name }}</td>
+              <td>${{ '%.2f'|format(row.monthly_rent or 0) }}</td>
+              <td>{{ row.due_day }}</td>
+              <td>${{ '%.2f'|format(row.paid_amount or 0) }}</td>
+              <td>{{ row.status }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No active leases yet.</p>
+    {% endif %}
+
+    <h3>Recent rent payments</h3>
+    {% if recent_payments %}
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Paid at</th>
+            <th>Tenant</th>
+            <th>Amount</th>
+            <th>Month</th>
+            <th>Year</th>
+            <th>Method</th>
+            <th>Note</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in recent_payments %}
+            <tr>
+              <td>{{ p.paid_at }}</td>
+              <td>{{ p.tenant_name or p.tenant_username }}</td>
+              <td>${{ '%.2f'|format(p.amount or 0) }}</td>
+              <td>{{ p.month }}</td>
+              <td>{{ p.year }}</td>
+              <td>{{ p.method }}</td>
+              <td>{{ p.note }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No rent payments recorded yet.</p>
+    {% endif %}
+
+    <hr class="section-divider">
+
+    <h2>All maintenance requests</h2>
+    {% if requests %}
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Created</th>
+            <th>Tenant</th>
+            <th>Title</th>
+            <th>Description</th>
+            <th>Status</th>
+            <th>Update</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in requests %}
+            <tr>
+              <td>{{ r.created_at }}</td>
+              <td>{{ r.tenant_name or r.tenant_username }}</td>
+              <td>{{ r.title }}</td>
+              <td>{{ r.description }}</td>
+              <td>{{ r.status }}</td>
+              <td>
+                <form method="post" action="{{ url_for('update_request_status', req_id=r.id) }}">
+                  <select name="status">
+                    <option value="Open" {% if r.status == 'Open' %}selected{% endif %}>Open</option>
+                    <option value="In Progress" {% if r.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                    <option value="Completed" {% if r.status == 'Completed' %}selected{% endif %}>Completed</option>
+                  </select>
+                  <button class="button small" type="submit">Save</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No maintenance requests yet.</p>
+    {% endif %}
+  </section>
+{% endblock %}

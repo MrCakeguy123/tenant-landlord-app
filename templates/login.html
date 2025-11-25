@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="card center">
+    <h1>Log in</h1>
+    <form method="post" class="form">
+      <label>
+        Username
+        <input type="text" name="username" required>
+      </label>
+      <label>
+        Password
+        <input type="password" name="password" required>
+      </label>
+      <button class="button primary" type="submit">Log in</button>
+    </form>
+    <p class="hint">
+      If no landlord exists yet, go to <code>/setup</code> first.
+    </p>
+  </section>
+{% endblock %}

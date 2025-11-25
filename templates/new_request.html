@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="card">
+    <h1>New maintenance request</h1>
+    <form method="post" class="form">
+      <label>
+        Title
+        <input type="text" name="title" required>
+      </label>
+      <label>
+        Description
+        <textarea name="description" rows="4" required></textarea>
+      </label>
+      <button class="button primary" type="submit">Submit</button>
+      <a class="button" href="{{ url_for('tenant_dashboard') }}">Cancel</a>
+    </form>
+  </section>
+{% endblock %}
