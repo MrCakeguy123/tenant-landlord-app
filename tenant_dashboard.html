@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="card">
+    <h1>Hello, {{ user.full_name or user.username }}</h1>
+    <p class="subtitle">Tenant dashboard</p>
+
+    <h2>Rent for {{ rent_month_label }}</h2>
+    {% if lease %}
+      <p>
+        Monthly rent:
+        <strong>${{ '%.2f'|format(lease.monthly_rent or 0) }}</strong>
+        (due on day {{ lease.due_day }} each month)
+      </p>
+      <p>
+        This month paid:
+        <strong>${{ '%.2f'|format(rent_paid or 0) }}</strong>
+        /
+        <strong>${{ '%.2f'|format(lease.monthly_rent or 0) }}</strong>
+      </p>
+      <p>Status: <strong>{{ rent_status }}</strong></p>
+
+      <h3>Record a rent payment</h3>
+      <form method="post" action="{{ url_for('tenant_pay_rent') }}" class="form">
+        <label>
+          Amount
+          <input type="number" step="0.01" name="amount" required>
+        </label>
+        <label>
+          Method
+          <select name="method">
+            <option value="Cash">Cash</option>
+            <option value="Check">Check</option>
+            <option value="Zelle">Zelle</option>
+            <option value="Venmo">Venmo</option>
+            <option value="Bank transfer">Bank transfer</option>
+            <option value="Other">Other</option>
+          </select>
+        </label>
+        <label>
+          Note (optional)
+          <textarea name="note" rows="2"></textarea>
+        </label>
+        <button class="button primary" type="submit">Record payment</button>
+      </form>
+
+      <h3>Pay rent online (card)</h3>
+      <form method="post" action="{{ url_for('tenant_stripe_checkout') }}" class="form">
+        <p>
+          You will be redirected to a secure payment page to pay the remaining balance for this month.
+        </p>
+        <button class="button primary" type="submit">Pay with card (Stripe)</button>
+      </form>
+
+      <h3>Recent rent payments</h3>
+      {% if recent_payments %}
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Paid at</th>
+              <th>Amount</th>
+              <th>Month</th>
+              <th>Year</th>
+              <th>Method</th>
+              <th>Note</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in recent_payments %}
+              <tr>
+                <td>{{ p.paid_at }}</td>
+                <td>${{ '%.2f'|format(p.amount or 0) }}</td>
+                <td>{{ p.month }}</td>
+                <td>{{ p.year }}</td>
+                <td>{{ p.method or 'N/A' }}</td>
+                <td>{{ p.note or '' }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p>No rent payments recorded yet.</p>
+      {% endif %}
+    {% else %}
+      <p>You do not have an active lease. Please contact your landlord.</p>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h2>Maintenance requests</h2>
+    <p><a class="button primary" href="{{ url_for('new_request') }}">Submit a new request</a></p>
+    {% if requests %}
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Created</th>
+            <th>Title</th>
+            <th>Description</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in requests %}
+            <tr>
+              <td>{{ r.created_at }}</td>
+              <td>{{ r.title }}</td>
+              <td>{{ r.description }}</td>
+              <td>{{ r.status }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>You have no maintenance requests yet.</p>
+    {% endif %}
+  </section>
+{% endblock %}
