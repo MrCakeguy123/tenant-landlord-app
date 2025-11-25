@@ -24,7 +24,14 @@
   </section>
 
   <section class="card">
-    <h2>{{ t('landlord_rent_status_for') }} {{ rent_month_label }}</h2>
+    <div style="display:flex; justify-content:space-between; align-items:flex-end; gap:1rem;">
+      <h2 style="margin:0;">
+        {{ t('landlord_rent_status_for') }} {{ rent_month_label }}
+      </h2>
+      <span class="muted-text">
+        Last updated: {{ rent_last_updated }}
+      </span>
+    </div>
 
     {% if rent_overview %}
       <table class="table">
@@ -44,7 +51,16 @@
               <td>${{ '%.2f'|format(row.monthly_rent or 0) }}</td>
               <td>{{ row.due_day }}</td>
               <td>${{ '%.2f'|format(row.paid_amount or 0) }}</td>
-              <td>{{ row.status }}</td>
+              <td>
+                {% set rent_class =
+                  'paid' if row.status == 'Paid'
+                  else ('partial' if row.status == 'Partial'
+                  else 'unpaid')
+                %}
+                <span class="status-badge status-{{ rent_class }}">
+                  {{ row.status }}
+                </span>
+              </td>
             </tr>
           {% endfor %}
         </tbody>
@@ -83,7 +99,18 @@
                   {{ r.description }}
                 {% endif %}
               </td>
-              <td>{{ r.status }}</td>
+              <td>
+                {% if r.status == 'Open' %}
+                  {% set m_class = 'open' %}
+                {% elif r.status == 'In progress' %}
+                  {% set m_class = 'in-progress' %}
+                {% else %}
+                  {% set m_class = 'completed' %}
+                {% endif %}
+                <span class="status-badge status-{{ m_class }}">
+                  {{ r.status }}
+                </span>
+              </td>
               <td>
                 <form method="post" action="{{ url_for('landlord_update_request_status', request_id=r.id) }}">
                   <select name="status">
