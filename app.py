@@ -49,7 +49,9 @@ SUPPORTED_LANGS = ["en", "es"]
 DEFAULT_LANG = "en"
 
 TRANSLATIONS = {
+    # ----------------------
     # Navigation
+    # ----------------------
     "nav_home": {
         "en": "Home",
         "es": "Inicio",
@@ -63,7 +65,17 @@ TRANSLATIONS = {
         "es": "Cerrar sesión",
     },
 
+    # ----------------------
+    # Generic
+    # ----------------------
+    "hello": {
+        "en": "Hello",
+        "es": "Hola",
+    },
+
+    # ----------------------
     # Tenant dashboard
+    # ----------------------
     "tenant_dashboard_title": {
         "en": "Tenant dashboard",
         "es": "Panel de inquilino",
@@ -97,7 +109,9 @@ TRANSLATIONS = {
         "es": "Pagar con tarjeta (Stripe)",
     },
 
+    # ----------------------
     # Landlord dashboard
+    # ----------------------
     "landlord_dashboard_title": {
         "en": "Landlord dashboard",
         "es": "Panel de propietario",
@@ -110,11 +124,6 @@ TRANSLATIONS = {
         "en": "Unpaid/partial rent this month",
         "es": "Renta sin pagar/parcial este mes",
     },
-    TRANSLATIONS = {
-    # ...existing keys...
-
-    "hello": {"en": "Hello", "es": "Hola"},
-
     "landlord_manage_tenants": {
         "en": "Manage tenants",
         "es": "Gestionar inquilinos",
@@ -144,20 +153,55 @@ TRANSLATIONS = {
         "es": "Aún no hay solicitudes de mantenimiento.",
     },
 
-    # Column/header labels
-    "col_tenant": {"en": "Tenant", "es": "Inquilino"},
-    "col_monthly_rent": {"en": "Monthly rent", "es": "Renta mensual"},
-    "col_due_day": {"en": "Due day", "es": "Día de vencimiento"},
-    "col_paid_this_month": {"en": "Paid this month", "es": "Pagado este mes"},
-    "col_status": {"en": "Status", "es": "Estado"},
-    "col_created": {"en": "Created", "es": "Creado"},
-    "col_title": {"en": "Title", "es": "Título"},
-    "col_description": {"en": "Description", "es": "Descripción"},
-    "col_update": {"en": "Update", "es": "Actualizar"},
-    "btn_save": {"en": "Save", "es": "Guardar"},
+    # ----------------------
+    # Table / column labels
+    # ----------------------
+    "col_tenant": {
+        "en": "Tenant",
+        "es": "Inquilino",
+    },
+    "col_monthly_rent": {
+        "en": "Monthly rent",
+        "es": "Renta mensual",
+    },
+    "col_due_day": {
+        "en": "Due day",
+        "es": "Día de vencimiento",
+    },
+    "col_paid_this_month": {
+        "en": "Paid this month",
+        "es": "Pagado este mes",
+    },
+    "col_status": {
+        "en": "Status",
+        "es": "Estado",
+    },
+    "col_created": {
+        "en": "Created",
+        "es": "Creado",
+    },
+    "col_title": {
+        "en": "Title",
+        "es": "Título",
+    },
+    "col_description": {
+        "en": "Description",
+        "es": "Descripción",
+    },
+    "col_update": {
+        "en": "Update",
+        "es": "Actualizar",
+    },
+
+    # ----------------------
+    # Buttons
+    # ----------------------
+    "btn_save": {
+        "en": "Save",
+        "es": "Guardar",
+    },
 }
 
-}
 
 def get_lang():
     lang = session.get("lang") or DEFAULT_LANG
