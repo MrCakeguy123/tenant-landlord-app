@@ -64,6 +64,10 @@ TRANSLATIONS = {
         "en": "Log out",
         "es": "Cerrar sesión",
     },
+    "nav_dashboard": {
+        "en": "Dashboard",
+        "es": "Panel",
+    },
 
     # ----------------------
     # Generic
@@ -201,6 +205,7 @@ TRANSLATIONS = {
         "es": "Guardar",
     },
 }
+
 
 
 def get_lang():
