@@ -1,25 +1,34 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="{{ current_lang }}">
 <head>
-  <meta charset="utf-8">
-  <title>Tenant/Landlord Portal</title>
+  <meta charset="UTF-8">
+  <title>Tenant/Landlord App</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
-  <header class="top-bar">
-    <div class="brand">🏠 Tenant / Landlord Portal</div>
-    <nav>
-      {% if current_user %}
-        <a href="{{ url_for('dashboard') }}">Dashboard</a>
-        {% if current_user.role == 'landlord' %}
-          <a href="{{ url_for('landlord_tenants') }}">Tenants</a>
-          <a href="{{ url_for('landlord_leases') }}">Leases</a>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="topbar-left">
+        <a href="{{ url_for('index') }}" class="brand">{{ t('nav_home') }}</a>
+      </div>
+      <div class="topbar-right">
+        {% if session.get('user_id') %}
+          <a href="{{ url_for('dashboard') }}">Dashboard</a>
+          <a href="{{ url_for('logout') }}">{{ t('nav_logout') }}</a>
+        {% else %}
+          <a href="{{ url_for('login') }}">{{ t('nav_login') }}</a>
         {% endif %}
-        <a href="{{ url_for('logout') }}">Logout</a>
-      {% else %}
-        <a href="{{ url_for('login') }}">Login</a>
-      {% endif %}
-    </nav>
+
+        <span class="lang-switch">
+          {% if current_lang == 'en' %}
+            <strong>EN</strong> · <a href="{{ url_for('set_language', lang='es') }}">ES</a>
+          {% else %}
+            <a href="{{ url_for('set_language', lang='en') }}">EN</a> · <strong>ES</strong>
+          {% endif %}
+        </span>
+      </div>
+    </div>
   </header>
 
   <main class="container">
@@ -27,7 +36,9 @@
       {% if messages %}
         <div class="flash-container">
           {% for category, message in messages %}
-            <div class="flash flash-{{ category }}">{{ message }}</div>
+            <div class="flash flash-{{ category }}">
+              {{ message }}
+            </div>
           {% endfor %}
         </div>
       {% endif %}
