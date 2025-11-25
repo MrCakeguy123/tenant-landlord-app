@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% block content %}
   <section class="card">
-    <h1>Hello, {{ user.full_name or user.username }}</h1>
+    <h1>{{ t('hello') }}, {{ user.full_name or user.username }}</h1>
     <p class="subtitle">{{ t('landlord_dashboard_title') }}</p>
 
     <p>
-      <a class="button" href="{{ url_for('landlord_tenants') }}">Manage tenants</a>
-      <a class="button" href="{{ url_for('landlord_leases') }}">Manage leases</a>
-      <a class="button" href="{{ url_for('landlord_requests') }}">All maintenance requests</a>
+      <a class="button" href="{{ url_for('landlord_tenants') }}">{{ t('landlord_manage_tenants') }}</a>
+      <a class="button" href="{{ url_for('landlord_leases') }}">{{ t('landlord_manage_leases') }}</a>
+      <a class="button" href="{{ url_for('landlord_requests') }}">{{ t('landlord_all_requests') }}</a>
     </p>
 
     <div class="summary-row">
@@ -24,17 +24,17 @@
   </section>
 
   <section class="card">
-    <h2>Rent status for {{ rent_month_label }}</h2>
+    <h2>{{ t('landlord_rent_status_for') }} {{ rent_month_label }}</h2>
 
     {% if rent_overview %}
       <table class="table">
         <thead>
           <tr>
-            <th>Tenant</th>
-            <th>Monthly rent</th>
-            <th>Due day</th>
-            <th>Paid this month</th>
-            <th>Status</th>
+            <th>{{ t('col_tenant') }}</th>
+            <th>{{ t('col_monthly_rent') }}</th>
+            <th>{{ t('col_due_day') }}</th>
+            <th>{{ t('col_paid_this_month') }}</th>
+            <th>{{ t('col_status') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -50,23 +50,23 @@
         </tbody>
       </table>
     {% else %}
-      <p>No active leases found.</p>
+      <p>{{ t('landlord_no_leases') }}</p>
     {% endif %}
   </section>
 
   <section class="card">
-    <h2>Recent maintenance requests</h2>
+    <h2>{{ t('landlord_recent_requests') }}</h2>
 
     {% if requests %}
       <table class="table">
         <thead>
           <tr>
-            <th>Created</th>
-            <th>Tenant</th>
-            <th>Title</th>
-            <th>Description</th>
-            <th>Status</th>
-            <th>Update</th>
+            <th>{{ t('col_created') }}</th>
+            <th>{{ t('col_tenant') }}</th>
+            <th>{{ t('col_title') }}</th>
+            <th>{{ t('col_description') }}</th>
+            <th>{{ t('col_status') }}</th>
+            <th>{{ t('col_update') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -91,7 +91,7 @@
                     <option value="In progress" {% if r.status == 'In progress' %}selected{% endif %}>In progress</option>
                     <option value="Completed" {% if r.status == 'Completed' %}selected{% endif %}>Completed</option>
                   </select>
-                  <button class="button small" type="submit">Save</button>
+                  <button class="button small" type="submit">{{ t('btn_save') }}</button>
                 </form>
               </td>
             </tr>
@@ -99,7 +99,7 @@
         </tbody>
       </table>
     {% else %}
-      <p>No maintenance requests yet.</p>
+      <p>{{ t('landlord_no_requests') }}</p>
     {% endif %}
   </section>
 {% endblock %}
