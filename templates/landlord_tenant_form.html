@@ -2,11 +2,11 @@
 {% block content %}
   <section class="card">
     <h1>New tenant</h1>
-    <form method="post" class="form">
-      <label>
-        Full name
-        <input type="text" name="full_name">
-      </label>
+    <p>
+      <a class="button" href="{{ url_for('landlord_tenants') }}">Back to tenants</a>
+    </p>
+
+    <form method="post" action="{{ url_for('landlord_new_tenant') }}" class="form">
       <label>
         Username
         <input type="text" name="username" required>
@@ -15,8 +15,15 @@
         Password
         <input type="password" name="password" required>
       </label>
+      <label>
+        Full name
+        <input type="text" name="full_name">
+      </label>
+      <label>
+        Email
+        <input type="email" name="email">
+      </label>
       <button class="button primary" type="submit">Create tenant</button>
-      <a class="button" href="{{ url_for('landlord_tenants') }}">Cancel</a>
     </form>
   </section>
 {% endblock %}
