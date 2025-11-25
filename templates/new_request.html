@@ -2,17 +2,16 @@
 {% block content %}
   <section class="card">
     <h1>New maintenance request</h1>
-    <form method="post" class="form">
+    <form method="post" action="{{ url_for('new_request') }}" class="form">
       <label>
         Title
         <input type="text" name="title" required>
       </label>
       <label>
         Description
-        <textarea name="description" rows="4" required></textarea>
+        <textarea name="description" rows="5" required></textarea>
       </label>
-      <button class="button primary" type="submit">Submit</button>
-      <a class="button" href="{{ url_for('tenant_dashboard') }}">Cancel</a>
+      <button class="button primary" type="submit">Submit request</button>
     </form>
   </section>
 {% endblock %}
