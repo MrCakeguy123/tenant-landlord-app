@@ -17,7 +17,17 @@
         /
         <strong>${{ '%.2f'|format(lease.monthly_rent or 0) }}</strong>
       </p>
-      <p>{{ t('tenant_status') }}: <strong>{{ rent_status }}</strong></p>
+      <p>
+        {{ t('tenant_status') }}:
+        {% set rent_class =
+          'paid' if rent_status == 'Paid'
+          else ('partial' if rent_status == 'Partial'
+          else 'unpaid')
+        %}
+        <span class="status-badge status-{{ rent_class }}">
+          {{ rent_status }}
+        </span>
+      </p>
 
       <h3>{{ t('tenant_record_payment') }}</h3>
       <form method="post" action="{{ url_for('tenant_pay_rent') }}" class="form">
@@ -104,7 +114,18 @@
               <td>{{ r.created_at }}</td>
               <td>{{ r.title }}</td>
               <td>{{ r.description }}</td>
-              <td>{{ r.status }}</td>
+              <td>
+                {% if r.status == 'Open' %}
+                  {% set m_class = 'open' %}
+                {% elif r.status == 'In progress' %}
+                  {% set m_class = 'in-progress' %}
+                {% else %}
+                  {% set m_class = 'completed' %}
+                {% endif %}
+                <span class="status-badge status-{{ m_class }}">
+                  {{ r.status }}
+                </span>
+              </td>
             </tr>
           {% endfor %}
         </tbody>
