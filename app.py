@@ -3,8 +3,10 @@ import sqlite3
 import logging
 import datetime
 import json
-from flask import Flask, g, render_template, request, redirect, url_for, session, flash
+
+import requests
 import stripe
+from flask import Flask, g, render_template, request, redirect, url_for, session, flash
 
 # -----------------------
 # App & Logging Setup
@@ -14,7 +16,10 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'change-me-in-production'  # TODO: override in production
 app.config['DATABASE'] = os.path.join(os.path.dirname(__file__), 'tenantlandlord.db')
 
-logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s] %(levelname)s in %(module)s: %(message)s')
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='[%(asctime)s] %(levelname)s in %(module)s: %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 # -----------------------
@@ -36,6 +41,166 @@ def inject_stripe_publishable_key():
     """Expose Stripe publishable key to all templates as {{ stripe_publishable_key }}."""
     return {"stripe_publishable_key": STRIPE_PUBLISHABLE_KEY}
 
+# -----------------------
+# Language / i18n config
+# -----------------------
+
+SUPPORTED_LANGS = ["en", "es"]
+DEFAULT_LANG = "en"
+
+TRANSLATIONS = {
+    # Navigation
+    "nav_home": {
+        "en": "Home",
+        "es": "Inicio",
+    },
+    "nav_login": {
+        "en": "Log in",
+        "es": "Iniciar sesión",
+    },
+    "nav_logout": {
+        "en": "Log out",
+        "es": "Cerrar sesión",
+    },
+
+    # Tenant dashboard
+    "tenant_dashboard_title": {
+        "en": "Tenant dashboard",
+        "es": "Panel de inquilino",
+    },
+    "tenant_rent_for_month": {
+        "en": "Rent for",
+        "es": "Renta de",
+    },
+    "tenant_monthly_rent": {
+        "en": "Monthly rent",
+        "es": "Renta mensual",
+    },
+    "tenant_this_month_paid": {
+        "en": "This month paid",
+        "es": "Pagado este mes",
+    },
+    "tenant_status": {
+        "en": "Status",
+        "es": "Estado",
+    },
+    "tenant_record_payment": {
+        "en": "Record a rent payment",
+        "es": "Registrar un pago de renta",
+    },
+    "tenant_pay_online_heading": {
+        "en": "Pay rent online (card)",
+        "es": "Pagar renta en línea (tarjeta)",
+    },
+    "tenant_pay_online_button": {
+        "en": "Pay with card (Stripe)",
+        "es": "Pagar con tarjeta (Stripe)",
+    },
+
+    # Landlord dashboard
+    "landlord_dashboard_title": {
+        "en": "Landlord dashboard",
+        "es": "Panel de propietario",
+    },
+    "landlord_open_requests": {
+        "en": "Open maintenance requests",
+        "es": "Solicitudes de mantenimiento abiertas",
+    },
+    "landlord_unpaid_rent": {
+        "en": "Unpaid/partial rent this month",
+        "es": "Renta sin pagar/parcial este mes",
+    },
+}
+
+def get_lang():
+    lang = session.get("lang") or DEFAULT_LANG
+    if lang not in SUPPORTED_LANGS:
+        lang = DEFAULT_LANG
+    return lang
+
+def translate_ui(key):
+    """Return translated UI string for current language."""
+    lang = get_lang()
+    value = TRANSLATIONS.get(key, {})
+    translated = value.get(lang) or value.get(DEFAULT_LANG) or key
+    return translated
+
+# DeepL configuration
+DEEPL_API_KEY = os.environ.get("DEEPL_API_KEY")
+DEEPL_API_URL = os.environ.get("DEEPL_API_URL", "https://api-free.deepl.com/v2/translate")
+
+def translate_text_deepl(text, target_lang):
+    """
+    Translate arbitrary text using DeepL.
+    target_lang: "en" or "es", etc.
+    """
+    if not text:
+        return text
+    if not DEEPL_API_KEY:
+        logger.warning("DeepL API key not configured, skipping translation.")
+        return None
+
+    # Map to DeepL language codes
+    deepl_lang = target_lang.upper()
+    if deepl_lang == "EN":
+        deepl_lang = "EN"  # or EN-US
+    elif deepl_lang == "ES":
+        deepl_lang = "ES"
+
+    logger.debug("DeepL translation requested to %s for text=%r", deepl_lang, text[:80])
+    try:
+        resp = requests.post(
+            DEEPL_API_URL,
+            data={
+                "auth_key": DEEPL_API_KEY,
+                "text": text,
+                "target_lang": deepl_lang,
+            },
+            timeout=10,
+        )
+        logger.debug("DeepL response status=%s", resp.status_code)
+        resp.raise_for_status()
+        data = resp.json()
+        translations = data.get("translations")
+        if translations:
+            translated_text = translations[0].get("text")
+            logger.debug(
+                "DeepL translation successful: %r -> %r",
+                text[:60],
+                translated_text[:60] if translated_text else None
+            )
+            return translated_text
+        logger.error("DeepL response missing 'translations': %s", data)
+    except Exception:
+        logger.exception("DeepL translation failed.")
+    return None
+
+@app.context_processor
+def inject_i18n():
+    """Make translation helper and language info available in all templates."""
+    return {
+        "t": translate_ui,
+        "current_lang": get_lang(),
+        "supported_langs": SUPPORTED_LANGS,
+    }
+
+@app.route("/set-language/<lang>")
+def set_language(lang):
+    logger.debug("set_language called with lang=%s", lang)
+    if lang not in SUPPORTED_LANGS:
+        logger.warning("Unsupported language requested: %s", lang)
+        flash("Language not supported.", "warning")
+        return redirect(url_for("dashboard") if session.get("user_id") else url_for("index"))
+
+    session["lang"] = lang
+    logger.info("Language set to %s for current session.", lang)
+    ref = request.referrer
+    if ref:
+        logger.debug("Redirecting back to referrer: %s", ref)
+        return redirect(ref)
+    if session.get("user_id"):
+        return redirect(url_for("dashboard"))
+    return redirect(url_for("index"))
 
 # -----------------------
 # Database Helpers
@@ -329,7 +494,7 @@ def setup():
             logger.info("Setup completed with landlord id=%s and tenant id=%s", landlord_id, tenant_id)
             flash("Setup completed. You can now log in.", "success")
             return redirect(url_for('login'))
-        except sqlite3.IntegrityError as e:
+        except sqlite3.IntegrityError:
             logger.exception("IntegrityError during setup.")
             flash("Error during setup: usernames might already exist.", "danger")
             return render_template('setup.html')
@@ -347,7 +512,11 @@ def login():
         if user and user['password'] == password:
             login_user(user)
             next_page = request.args.get('next')
-            logger.info("Login successful for username=%s; redirecting to %s", username, next_page or 'dashboard')
+            logger.info(
+                "Login successful for username=%s; redirecting to %s",
+                username,
+                next_page or 'dashboard'
+            )
             return redirect(next_page or url_for('dashboard'))
         else:
             logger.warning("Login failed for username=%s", username)
@@ -383,7 +552,7 @@ def tenant_dashboard():
     logger.debug("Loading tenant dashboard for tenant id=%s", user['id'])
 
     # Maintenance requests
-    requests = db.execute(
+    requests_rows = db.execute(
         "SELECT * FROM maintenance_requests WHERE tenant_id = ? ORDER BY created_at DESC",
         (user['id'],)
     ).fetchall()
@@ -405,7 +574,7 @@ def tenant_dashboard():
     return render_template(
         'tenant_dashboard.html',
         user=user,
-        requests=requests,
+        requests=requests_rows,
         lease=lease,
         rent_month_label=month_label,
         rent_paid=rent_paid,
@@ -429,7 +598,8 @@ def new_request():
         else:
             db = get_db()
             db.execute(
-                "INSERT INTO maintenance_requests (tenant_id, title, description, status) VALUES (?, ?, ?, ?)",
+                "INSERT INTO maintenance_requests (tenant_id, title, description, status) "
+                "VALUES (?, ?, ?, ?)",
                 (user['id'], title, description, 'Open')
             )
             db.commit()
@@ -501,7 +671,10 @@ def tenant_stripe_checkout():
     logger.debug("Tenant id=%s requested Stripe rent checkout", user['id'])
 
     if not STRIPE_SECRET_KEY or not STRIPE_PUBLISHABLE_KEY:
-        logger.error("Stripe keys not configured when tenant id=%s attempted Stripe payment", user['id'])
+        logger.error(
+            "Stripe keys not configured when tenant id=%s attempted Stripe payment",
+            user['id']
+        )
         flash("Online payments are not configured. Please contact your landlord.", "danger")
         return redirect(url_for('tenant_dashboard'))
 
@@ -567,11 +740,10 @@ def tenant_stripe_checkout():
         # Redirect directly to the hosted checkout page
         return redirect(checkout_session.url, code=303)
 
-    except Exception as e:
+    except Exception:
         logger.exception("Failed to create Stripe Checkout Session for tenant id=%s", user['id'])
         flash("Could not start payment. Please try again later.", "danger")
         return redirect(url_for('tenant_dashboard'))
-
 
 @app.route('/tenant/rent/stripe-success')
 @login_required(role='tenant')
@@ -585,7 +757,6 @@ def tenant_stripe_success():
     flash("Payment completed. Your rent status will update shortly.", "success")
     return redirect(url_for('tenant_dashboard'))
 
-
 @app.route('/tenant/rent/stripe-cancel')
 @login_required(role='tenant')
 def tenant_stripe_cancel():
@@ -596,7 +767,6 @@ def tenant_stripe_cancel():
     logger.info("Tenant id=%s returned from Stripe cancel URL", user['id'])
     flash("Payment was cancelled. No charges were made.", "warning")
     return redirect(url_for('tenant_dashboard'))
-
 
 @app.route('/stripe/webhook', methods=['POST'])
 def stripe_webhook():
@@ -682,10 +852,31 @@ def stripe_webhook():
 
     return "OK", 200
 
-
 # -----------------------
 # Landlord Views
 # -----------------------
+
+def _apply_deepl_to_requests(rows):
+    """If current language is Spanish, add translated_description to each maintenance row."""
+    lang = get_lang()
+    if lang != "es":
+        return rows
+
+    processed = []
+    for r in rows:
+        r_dict = dict(r)
+        desc = r_dict.get("description")
+        if desc:
+            translated = translate_text_deepl(desc, target_lang="es")
+            if translated:
+                r_dict["translated_description"] = translated
+        processed.append(r_dict)
+    logger.debug(
+        "Applied DeepL translation to %d maintenance requests (lang=%s).",
+        len(processed),
+        lang
+    )
+    return processed
 
 @app.route('/landlord')
 @login_required(role='landlord')
@@ -695,7 +886,7 @@ def landlord_dashboard():
     logger.debug("Loading landlord dashboard for landlord id=%s", user['id'])
 
     # Maintenance overview scoped to this landlord's tenants
-    requests = db.execute(
+    requests_rows = db.execute(
         """
         SELECT mr.*, u.full_name as tenant_name, u.username as tenant_username
         FROM maintenance_requests mr
@@ -706,6 +897,7 @@ def landlord_dashboard():
         """,
         (user['id'],)
     ).fetchall()
+    requests_for_view = _apply_deepl_to_requests(requests_rows)
 
     open_count = db.execute(
         """
@@ -721,7 +913,10 @@ def landlord_dashboard():
 
     # Rent overview for current month
     month, year, month_label = get_current_month_year()
-    logger.debug("Calculating rent overview for landlord id=%s month=%s year=%s", user['id'], month, year)
+    logger.debug(
+        "Calculating rent overview for landlord id=%s month=%s year=%s",
+        user['id'], month, year
+    )
 
     rent_rows = db.execute(
         """
@@ -770,7 +965,7 @@ def landlord_dashboard():
     return render_template(
         'landlord_dashboard.html',
         user=user,
-        requests=requests,
+        requests=requests_for_view,
         open_count=open_count,
         rent_month_label=month_label,
         rent_overview=rent_overview,
@@ -816,7 +1011,8 @@ def landlord_new_lease():
         end_date = request.form.get('end_date') or None
 
         logger.debug(
-            "New lease submission: tenant_id_raw=%s, monthly_rent_raw=%s, due_day_raw=%s, start_date=%s, end_date=%s",
+            "New lease submission: tenant_id_raw=%s, monthly_rent_raw=%s, due_day_raw=%s, "
+            "start_date=%s, end_date=%s",
             tenant_id_raw, monthly_rent_raw, due_day_raw, start_date, end_date
         )
 
@@ -908,7 +1104,8 @@ def landlord_new_tenant():
 
         try:
             db.execute(
-                "INSERT INTO users (username, password, role, full_name, email) VALUES (?, ?, 'tenant', ?, ?)",
+                "INSERT INTO users (username, password, role, full_name, email) "
+                "VALUES (?, ?, 'tenant', ?, ?)",
                 (username, password, full_name, email)
             )
             db.commit()
@@ -928,7 +1125,7 @@ def landlord_requests():
     db = get_db()
     logger.debug("Landlord requests view for landlord id=%s", user['id'])
 
-    requests = db.execute(
+    requests_rows = db.execute(
         """
         SELECT mr.*, u.full_name as tenant_name, u.username as tenant_username
         FROM maintenance_requests mr
@@ -940,7 +1137,9 @@ def landlord_requests():
         (user['id'],)
     ).fetchall()
 
-    return render_template('landlord_requests.html', user=user, requests=requests)
+    requests_for_view = _apply_deepl_to_requests(requests_rows)
+
+    return render_template('landlord_requests.html', user=user, requests=requests_for_view)
 
 @app.route('/landlord/requests/<int:request_id>/status', methods=['POST'])
 @login_required(role='landlord')
