@@ -14,7 +14,7 @@ from flask import Flask, g, render_template, request, redirect, url_for, session
 # -----------------------
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "change-me-in-production"  # override in env for real use
+app.config["SECRET_KEY"] = "change-me-in-production"  # override with env in production
 app.config["DATABASE"] = os.path.join(os.path.dirname(__file__), "tenantlandlord.db")
 
 logging.basicConfig(
@@ -58,29 +58,14 @@ TRANSLATIONS = {
     # ----------------------
     # Navigation
     # ----------------------
-    "nav_home": {
-        "en": "Home",
-        "es": "Inicio",
-    },
-    "nav_login": {
-        "en": "Log in",
-        "es": "Iniciar sesión",
-    },
-    "nav_logout": {
-        "en": "Log out",
-        "es": "Cerrar sesión",
-    },
-    "nav_dashboard": {
-        "en": "Dashboard",
-        "es": "Panel",
-    },
+    "nav_home": {"en": "Home", "es": "Inicio"},
+    "nav_login": {"en": "Log in", "es": "Iniciar sesión"},
+    "nav_logout": {"en": "Log out", "es": "Cerrar sesión"},
+    "nav_dashboard": {"en": "Dashboard", "es": "Panel"},
     # ----------------------
     # Generic
     # ----------------------
-    "hello": {
-        "en": "Hello",
-        "es": "Hola",
-    },
+    "hello": {"en": "Hello", "es": "Hola"},
     # ----------------------
     # Tenant dashboard
     # ----------------------
@@ -88,22 +73,10 @@ TRANSLATIONS = {
         "en": "Tenant dashboard",
         "es": "Panel de inquilino",
     },
-    "tenant_rent_for_month": {
-        "en": "Rent for",
-        "es": "Renta de",
-    },
-    "tenant_monthly_rent": {
-        "en": "Monthly rent",
-        "es": "Renta mensual",
-    },
-    "tenant_this_month_paid": {
-        "en": "This month paid",
-        "es": "Pagado este mes",
-    },
-    "tenant_status": {
-        "en": "Status",
-        "es": "Estado",
-    },
+    "tenant_rent_for_month": {"en": "Rent for", "es": "Renta de"},
+    "tenant_monthly_rent": {"en": "Monthly rent", "es": "Renta mensual"},
+    "tenant_this_month_paid": {"en": "This month paid", "es": "Pagado este mes"},
+    "tenant_status": {"en": "Status", "es": "Estado"},
     "tenant_record_payment": {
         "en": "Record a rent payment",
         "es": "Registrar un pago de renta",
@@ -162,49 +135,29 @@ TRANSLATIONS = {
     # ----------------------
     # Table / column labels
     # ----------------------
-    "col_tenant": {
-        "en": "Tenant",
-        "es": "Inquilino",
-    },
-    "col_monthly_rent": {
-        "en": "Monthly rent",
-        "es": "Renta mensual",
-    },
-    "col_due_day": {
-        "en": "Due day",
-        "es": "Día de vencimiento",
-    },
-    "col_paid_this_month": {
-        "en": "Paid this month",
-        "es": "Pagado este mes",
-    },
-    "col_status": {
-        "en": "Status",
-        "es": "Estado",
-    },
-    "col_created": {
-        "en": "Created",
-        "es": "Creado",
-    },
-    "col_title": {
-        "en": "Title",
-        "es": "Título",
-    },
-    "col_description": {
-        "en": "Description",
-        "es": "Descripción",
-    },
-    "col_update": {
-        "en": "Update",
-        "es": "Actualizar",
-    },
+    "col_tenant": {"en": "Tenant", "es": "Inquilino"},
+    "col_monthly_rent": {"en": "Monthly rent", "es": "Renta mensual"},
+    "col_due_day": {"en": "Due day", "es": "Día de vencimiento"},
+    "col_paid_this_month": {"en": "Paid this month", "es": "Pagado este mes"},
+    "col_status": {"en": "Status", "es": "Estado"},
+    "col_created": {"en": "Created", "es": "Creado"},
+    "col_title": {"en": "Title", "es": "Título"},
+    "col_description": {"en": "Description", "es": "Descripción"},
+    "col_update": {"en": "Update", "es": "Actualizar"},
+    "col_priority": {"en": "Priority", "es": "Prioridad"},
+    # ----------------------
+    # Priority labels
+    # ----------------------
+    "priority_low": {"en": "Low", "es": "Baja"},
+    "priority_normal": {"en": "Normal", "es": "Normal"},
+    "priority_high": {"en": "High", "es": "Alta"},
+    "priority_emergency": {"en": "Emergency", "es": "Emergencia"},
+    "label_overdue": {"en": "Overdue", "es": "Atrasado"},
     # ----------------------
     # Buttons
     # ----------------------
-    "btn_save": {
-        "en": "Save",
-        "es": "Guardar",
-    },
+    "btn_save": {"en": "Save", "es": "Guardar"},
+    "btn_submit_request": {"en": "Submit request", "es": "Enviar solicitud"},
 }
 
 
@@ -373,12 +326,43 @@ def init_db():
             description TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'Open',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            priority TEXT NOT NULL DEFAULT 'Normal',
             FOREIGN KEY (tenant_id) REFERENCES users(id)
         );
         """
     )
     db.commit()
     logger.info("Database schema ensured (tables created if they did not exist).")
+
+
+def ensure_maintenance_priority_column():
+    """
+    Ensure the 'priority' column exists on maintenance_requests for older databases.
+    Safe to call multiple times.
+    """
+    db = get_db()
+    try:
+        logger.debug("Ensuring 'priority' column exists on maintenance_requests.")
+        db.execute(
+            "ALTER TABLE maintenance_requests "
+            "ADD COLUMN priority TEXT NOT NULL DEFAULT 'Normal'"
+        )
+        db.commit()
+        logger.info("Added 'priority' column to maintenance_requests table.")
+    except sqlite3.OperationalError as e:
+        msg = str(e)
+        if "duplicate column name" in msg or "already exists" in msg:
+            logger.debug(
+                "'priority' column already exists on maintenance_requests; no migration needed."
+            )
+        else:
+            logger.exception("Unexpected error while ensuring 'priority' column: %s", e)
+
+
+@app.before_first_request
+def run_startup_migrations():
+    logger.debug("Running startup migrations before first request.")
+    ensure_maintenance_priority_column()
 
 
 # -----------------------
@@ -623,9 +607,7 @@ def setup():
                 "INSERT INTO users (username, password, role, full_name, email) VALUES (?, ?, 'landlord', ?, ?)",
                 (landlord_username, landlord_password, landlord_full_name, landlord_email),
             )
-            landlord_id = db.execute("SELECT last_insert_rowid() as id").fetchone()[
-                "id"
-            ]
+            landlord_id = db.execute("SELECT last_insert_rowid() as id").fetchone()["id"]
 
             db.execute(
                 "INSERT INTO users (username, password, role, full_name, email) VALUES (?, ?, 'tenant', ?, ?)",
@@ -699,6 +681,60 @@ def dashboard():
 
 
 # -----------------------
+# Maintenance helpers (priority + overdue)
+# -----------------------
+
+def _apply_deepl_and_overdue(rows):
+    """
+    Convert maintenance request rows to dicts, attach translated_description (for ES)
+    and is_overdue flag based on age + status.
+    """
+    lang = get_lang()
+    now = datetime.datetime.utcnow()
+    processed = []
+
+    for r in rows:
+        r_dict = dict(r)
+
+        # DeepL translation only when viewing in Spanish
+        if lang == "es":
+            desc = r_dict.get("description")
+            if desc:
+                translated = translate_text_deepl(desc, target_lang="es")
+                if translated:
+                    r_dict["translated_description"] = translated
+
+        # Overdue logic: Open/In progress older than 7 days
+        r_dict["is_overdue"] = False
+        created_at_str = r_dict.get("created_at")
+        status = r_dict.get("status")
+        if created_at_str and status in ("Open", "In progress"):
+            try:
+                # SQLite CURRENT_TIMESTAMP is "YYYY-MM-DD HH:MM:SS"
+                created_dt = datetime.datetime.fromisoformat(
+                    created_at_str.replace(" ", "T")
+                )
+                age_days = (now - created_dt).days
+                if age_days >= 7:
+                    r_dict["is_overdue"] = True
+            except Exception:
+                logger.exception(
+                    "Failed to parse created_at for maintenance request id=%s value=%r",
+                    r_dict.get("id"),
+                    created_at_str,
+                )
+
+        processed.append(r_dict)
+
+    logger.debug(
+        "Processed %d maintenance requests for DeepL/overdue (lang=%s).",
+        len(processed),
+        lang,
+    )
+    return processed
+
+
+# -----------------------
 # Tenant Views
 # -----------------------
 
@@ -714,6 +750,7 @@ def tenant_dashboard():
         "SELECT * FROM maintenance_requests WHERE tenant_id = ? ORDER BY created_at DESC",
         (user["id"],),
     ).fetchall()
+    requests_for_view = _apply_deepl_and_overdue(requests_rows)
 
     # Rent info
     month, year, month_label = get_current_month_year()
@@ -732,7 +769,7 @@ def tenant_dashboard():
     return render_template(
         "tenant_dashboard.html",
         user=user,
-        requests=requests_rows,
+        requests=requests_for_view,
         lease=lease,
         rent_month_label=month_label,
         rent_paid=rent_paid,
@@ -748,25 +785,36 @@ def new_request():
     if request.method == "POST":
         title = request.form.get("title", "").strip()
         description = request.form.get("description", "").strip()
+        priority = request.form.get("priority", "Normal").strip() or "Normal"
         logger.debug(
-            "New maintenance request submission by tenant id=%s, title='%s'",
+            "New maintenance request submission by tenant id=%s, title='%s', priority='%s'",
             user["id"],
             title,
+            priority,
         )
+
+        allowed_priorities = {"Low", "Normal", "High", "Emergency"}
+        if priority not in allowed_priorities:
+            logger.warning(
+                "Invalid priority '%s' supplied, defaulting to 'Normal'.", priority
+            )
+            priority = "Normal"
+
         if not title or not description:
             flash("Please fill in both title and description.", "warning")
         else:
             db = get_db()
             db.execute(
-                "INSERT INTO maintenance_requests (tenant_id, title, description, status) "
-                "VALUES (?, ?, ?, ?)",
-                (user["id"], title, description, "Open"),
+                "INSERT INTO maintenance_requests (tenant_id, title, description, status, priority) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (user["id"], title, description, "Open", priority),
             )
             db.commit()
             logger.info(
-                "Maintenance request created for tenant id=%s with title='%s'",
+                "Maintenance request created for tenant id=%s with title='%s' priority='%s'",
                 user["id"],
                 title,
+                priority,
             )
             flash("Request submitted!", "success")
             return redirect(url_for("tenant_dashboard"))
@@ -840,6 +888,10 @@ def tenant_pay_rent():
     )
     return redirect(url_for("tenant_dashboard"))
 
+
+# -----------------------
+# Stripe tenant flows
+# -----------------------
 
 @app.route("/tenant/rent/stripe-checkout", methods=["POST"])
 @login_required(role="tenant")
@@ -1066,31 +1118,8 @@ def stripe_webhook():
 
 
 # -----------------------
-# Landlord Views & DeepL
+# Landlord Views
 # -----------------------
-
-def _apply_deepl_to_requests(rows):
-    """If current language is Spanish, add translated_description to each maintenance row."""
-    lang = get_lang()
-    if lang != "es":
-        return rows
-
-    processed = []
-    for r in rows:
-        r_dict = dict(r)
-        desc = r_dict.get("description")
-        if desc:
-            translated = translate_text_deepl(desc, target_lang="es")
-            if translated:
-                r_dict["translated_description"] = translated
-        processed.append(r_dict)
-    logger.debug(
-        "Applied DeepL translation to %d maintenance requests (lang=%s).",
-        len(processed),
-        lang,
-    )
-    return processed
-
 
 @app.route("/landlord")
 @login_required(role="landlord")
@@ -1111,7 +1140,7 @@ def landlord_dashboard():
         """,
         (user["id"],),
     ).fetchall()
-    requests_for_view = _apply_deepl_to_requests(requests_rows)
+    requests_for_view = _apply_deepl_and_overdue(requests_rows)
 
     open_count = db.execute(
         """
@@ -1399,7 +1428,7 @@ def landlord_requests():
         (user["id"],),
     ).fetchall()
 
-    requests_for_view = _apply_deepl_to_requests(requests_rows)
+    requests_for_view = _apply_deepl_and_overdue(requests_rows)
 
     return render_template("landlord_requests.html", user=user, requests=requests_for_view)
 
