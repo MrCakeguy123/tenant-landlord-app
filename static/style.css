@@ -14,30 +14,120 @@ body {
 }
 
 .container {
-  max-width: 1100px;
-  margin: 1.5rem auto;
-  padding: 0 1rem 2rem;
+  max-width: 960px;
+  margin: 2rem auto 3rem;
+  padding: 0 1.5rem;
 }
 
-/* ---------- Cards & headings ---------- */
+p {
+  line-height: 1.5;
+}
+
+a {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #1d4ed8;
+}
+
+/* ---------- Top bar ---------- */
+
+.topbar {
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.topbar-inner {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.topbar-left,
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.topbar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 1rem;
+  color: #111827;
+}
+
+.topbar-brand:hover {
+  color: #2563eb;
+}
+
+.brand-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 0.5rem;
+  object-fit: cover;
+}
+
+.lang-toggle {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.lang-toggle a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.lang-toggle a:hover {
+  color: #2563eb;
+}
+
+.lang-current {
+  font-weight: 600;
+  color: #111827;
+}
+
+/* ---------- Cards & typography ---------- */
 
 .card {
   background: #ffffff;
-  border-radius: 18px;
-  padding: 1.75rem 1.9rem;
-  margin-bottom: 1.25rem;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+  border-radius: 1.25rem;
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
 }
 
-.card h1,
-.card h2 {
-  margin-top: 0;
+h1 {
+  margin: 0 0 0.5rem;
+  font-size: 2rem;
+}
+
+h2 {
+  margin: 1.5rem 0 0.5rem;
+  font-size: 1.3rem;
+}
+
+h3 {
+  margin: 1.25rem 0 0.5rem;
+  font-size: 1.1rem;
 }
 
 .subtitle {
-  margin-top: 0.3rem;
-  margin-bottom: 1rem;
+  margin: 0 0 1.5rem;
   color: #6b7280;
+}
+
+.muted-text {
+  color: #6b7280;
+  font-size: 0.85rem;
 }
 
 /* ---------- Buttons ---------- */
@@ -46,36 +136,232 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.45rem 0.9rem;
+  padding: 0.55rem 1.15rem;
   border-radius: 999px;
-  border: 1px solid #d1d5db;
-  background: #f9fafb;
-  color: #111827;
-  font-size: 0.85rem;
+  border: 1px solid transparent;
+  font-size: 0.9rem;
   font-weight: 500;
   text-decoration: none;
   cursor: pointer;
+  background-color: #e5e7eb;
+  color: #111827;
   gap: 0.25rem;
 }
 
 .button:hover {
-  background: #e5e7eb;
+  background-color: #d1d5db;
 }
 
 .button.primary {
-  background: #2563eb;
+  background-color: #2563eb;
   border-color: #2563eb;
   color: #ffffff;
 }
 
 .button.primary:hover {
-  background: #1d4ed8;
+  background-color: #1d4ed8;
   border-color: #1d4ed8;
 }
 
 .button.small {
-  font-size: 0.78rem;
-  padding: 0.35rem 0.8rem;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.8rem;
+}
+
+/* ---------- Forms ---------- */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 640px;
+}
+
+.form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.form input,
+.form select,
+.form textarea {
+  border-radius: 0.75rem;
+  border: 1px solid #d1d5db;
+  padding: 0.6rem 0.75rem;
+  font: inherit;
+  background: #f9fafb;
+}
+
+.form input:focus,
+.form select:focus,
+.form textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px #2563eb1a;
+  background: #ffffff;
+}
+
+.form textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+/* Setup page grid */
+
+.form-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.form-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.form-actions {
+  margin-top: 1.5rem;
+}
+
+/* ---------- Tables ---------- */
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+
+.table th,
+.table td {
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+}
+
+.table thead th {
+  border-bottom: 1px solid #e5e7eb;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #6b7280;
+}
+
+.table tbody tr:nth-child(even) {
+  background-color: #f9fafb;
+}
+
+.table tbody tr:hover {
+  background-color: #eff6ff;
+}
+
+.row-overdue {
+  background-color: #fef2f2;
+}
+
+/* ---------- Summary cards ---------- */
+
+.summary-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.summary-card {
+  flex: 1 1 160px;
+  padding: 1rem 1.2rem;
+  border-radius: 1rem;
+  background: #f9fafb;
+}
+
+.summary-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+  margin-bottom: 0.35rem;
+}
+
+.summary-value {
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+/* ---------- Badges ---------- */
+
+.status-badge,
+.priority-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Rent status badges */
+
+.status-paid {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.status-partial {
+  background-color: #fef9c3;
+  color: #92400e;
+}
+
+.status-unpaid {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+/* Maintenance status badges */
+
+.status-open {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.status-in-progress {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.status-completed {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+/* Priority badges */
+
+.priority-badge {
+  margin-left: 0.4rem;
+}
+
+.priority-low {
+  background-color: #e0f2fe;
+  color: #1d4ed8;
+}
+
+.priority-medium {
+  background-color: #fef9c3;
+  color: #92400e;
+}
+
+.priority-high {
+  background-color: #fee2e2;
+  color: #b91c1c;
 }
 
 /* ---------- Flash messages ---------- */
@@ -92,157 +378,27 @@ body {
 }
 
 .flash-success {
-  background: #ecfdf3;
+  background-color: #dcfce7;
   color: #166534;
 }
 
 .flash-danger {
-  background: #fef2f2;
-  color: #b91c1c;
-}
-
-.flash-warning {
-  background: #fffbeb;
-  color: #92400e;
-}
-
-.flash-info {
-  background: #eff6ff;
-  color: #1d4ed8;
-}
-
-/* ---------- Forms ---------- */
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.form label {
-  display: flex;
-  flex-direction: column;
-  font-size: 0.9rem;
-  gap: 0.25rem;
-}
-
-.form input[type="text"],
-.form input[type="password"],
-.form input[type="email"],
-.form input[type="number"],
-.form input[type="date"],
-.form select,
-.form textarea {
-  border-radius: 0.7rem;
-  border: 1px solid #d1d5db;
-  padding: 0.45rem 0.65rem;
-  font-size: 0.9rem;
-}
-
-.form textarea {
-  resize: vertical;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1.25rem;
-}
-
-.form-column h2 {
-  margin-top: 0;
-}
-
-/* ---------- Tables ---------- */
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-}
-
-.table th,
-.table td {
-  padding: 0.6rem 0.8rem;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.table thead th {
-  text-align: left;
-  background: #f9fafb;
-  font-weight: 600;
-}
-
-/* ---------- Summary cards ---------- */
-
-.summary-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  margin-top: 1.2rem;
-}
-
-.summary-card {
-  flex: 1 1 180px;
-  padding: 0.9rem 1rem;
-  border-radius: 1rem;
-  background: #eff6ff;
-}
-
-.summary-label {
-  font-size: 0.85rem;
-  color: #4b5563;
-}
-
-.summary-value {
-  margin-top: 0.2rem;
-  font-size: 1.4rem;
-  font-weight: 600;
-}
-
-/* ---------- Status badges ---------- */
-
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.15rem 0.6rem;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  line-height: 1.2;
-}
-
-/* Rent status */
-.status-paid {
-  background-color: #dcfce7;
-  color: #166534;
-}
-.status-partial {
-  background-color: #fef9c3;
-  color: #92400e;
-}
-.status-unpaid {
   background-color: #fee2e2;
   color: #b91c1c;
 }
 
-/* Maintenance status */
-.status-open {
-  background-color: #eff6ff;
-  color: #1d4ed8;
-}
-.status-in-progress {
+.flash-warning {
   background-color: #fef3c7;
   color: #92400e;
 }
-.status-completed {
-  background-color: #dcfce7;
-  color: #166534;
+
+.flash-info {
+  background-color: #e0f2fe;
+  color: #1d4ed8;
 }
 
 /* ---------- Misc ---------- */
 
-.muted-text {
-  color: #6b7280;
-  font-size: 0.8rem;
+.category {
+  font-weight: 600;
 }
