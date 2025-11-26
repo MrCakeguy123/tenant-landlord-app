@@ -7,8 +7,8 @@
 
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
-    <!-- Favicon: place static/favicon.ico in your repo -->
-    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <!-- App icon / favicon -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='app-icon.png') }}">
   </head>
   <body>
     <header class="topbar">
@@ -16,7 +16,8 @@
         <div class="topbar-left">
           <a href="{{ url_for('dashboard') if session.get('user_id') else url_for('index') }}"
              class="topbar-brand">
-            Tenant / Landlord
+            <img src="{{ url_for('static', filename='app-icon.png') }}" alt="" class="brand-icon">
+            <span>Tenant / Landlord</span>
           </a>
         </div>
         <div class="topbar-right">
