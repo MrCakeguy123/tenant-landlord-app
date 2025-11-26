@@ -359,11 +359,20 @@ def ensure_maintenance_priority_column():
             logger.exception("Unexpected error while ensuring 'priority' column: %s", e)
 
 
-@app.before_first_request
 def run_startup_migrations():
-    logger.debug("Running startup migrations before first request.")
+    """
+    Run one-time startup migrations such as adding new columns.
+    This is called explicitly at startup instead of using Flask's
+    removed `before_first_request` hook (Flask 3.x compatibility).
+    """
+    logger.debug("Running startup migrations at app startup.")
     ensure_maintenance_priority_column()
 
+
+with app.app_context():
+    # Ensure DB migrations run when the app starts up (and log it).
+    logger.debug("Entering app context to run startup migrations.")
+    run_startup_migrations()
 
 # -----------------------
 # Utility Helpers
