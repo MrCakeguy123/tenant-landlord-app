@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
   <section class="card">
-    <h1>Hello, {{ user.full_name or user.username }}</h1>
+    <h1>{{ t('hello') }}, {{ user.full_name or user.username }}</h1>
     <p class="subtitle">{{ t('tenant_dashboard_title') }}</p>
 
     {% if lease %}
@@ -102,18 +102,27 @@
       <table class="table">
         <thead>
           <tr>
-            <th>Created</th>
-            <th>Title</th>
-            <th>Description</th>
-            <th>Status</th>
+            <th>{{ t('col_created') }}</th>
+            <th>{{ t('col_title') }}</th>
+            <th>{{ t('col_description') }}</th>
+            <th>{{ t('col_priority') }}</th>
+            <th>{{ t('col_status') }}</th>
           </tr>
         </thead>
         <tbody>
           {% for r in requests %}
-            <tr>
+            {% set priority = r.priority or 'Normal' %}
+            {% set p_key = 'priority_' + priority|lower %}
+            {% set p_class = 'priority-' + priority|lower %}
+            <tr class="{% if r.is_overdue %}row-overdue{% endif %}">
               <td>{{ r.created_at }}</td>
               <td>{{ r.title }}</td>
               <td>{{ r.description }}</td>
+              <td>
+                <span class="priority-badge {{ p_class }}">
+                  {{ t(p_key) }}
+                </span>
+              </td>
               <td>
                 {% if r.status == 'Open' %}
                   {% set m_class = 'open' %}
@@ -125,6 +134,9 @@
                 <span class="status-badge status-{{ m_class }}">
                   {{ r.status }}
                 </span>
+                {% if r.is_overdue %}
+                  <span class="overdue-badge">{{ t('label_overdue') }}</span>
+                {% endif %}
               </td>
             </tr>
           {% endfor %}
