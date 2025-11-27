@@ -81,6 +81,7 @@
             <th>{{ t('col_tenant') }}</th>
             <th>{{ t('col_title') }}</th>
             <th>{{ t('col_description') }}</th>
+            <th>Image</th>
             <th>{{ t('col_priority') }}</th>
             <th>{{ t('col_status') }}</th>
             <th>{{ t('col_update') }}</th>
@@ -101,6 +102,16 @@
                   <small>({{ r.description }})</small>
                 {% else %}
                   {{ r.description }}
+                {% endif %}
+              </td>
+              <td>
+                {% if r.image_filename %}
+                  <a href="{{ url_for('static', filename='uploads/' ~ r.image_filename) }}" target="_blank" rel="noopener">View</a>
+                  <div class="thumbnail-wrapper">
+                    <img src="{{ url_for('static', filename='uploads/' ~ r.image_filename) }}" alt="Request image" class="thumbnail">
+                  </div>
+                {% else %}
+                  <span class="muted-text">No image</span>
                 {% endif %}
               </td>
               <td>

@@ -402,3 +402,15 @@ h3 {
 .category {
   font-weight: 600;
 }
+
+.thumbnail-wrapper {
+  margin-top: 0.35rem;
+}
+
+.thumbnail {
+  width: 80px;
+  height: auto;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+  object-fit: cover;
+}
