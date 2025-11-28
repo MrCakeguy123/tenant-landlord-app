@@ -1,3 +1,59 @@
+/* ---------- CSS Variables (Light Mode Default) ---------- */
+
+:root {
+  --bg-body: #f3f4f6;
+  --bg-card: #ffffff;
+  --bg-topbar: #f9fafb;
+  --bg-input: #f9fafb;
+  --bg-input-focus: #ffffff;
+  --bg-button: #e5e7eb;
+  --bg-button-hover: #d1d5db;
+  --bg-table-even: #f9fafb;
+  --bg-table-hover: #eff6ff;
+  --bg-summary: #f9fafb;
+  --bg-calendar-legend: #f5f5f5;
+  
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
+  
+  --border-color: #e5e7eb;
+  --border-input: #d1d5db;
+  
+  --accent-primary: #2563eb;
+  --accent-primary-hover: #1d4ed8;
+  
+  --shadow-card: 0 10px 30px rgba(15, 23, 42, 0.06);
+}
+
+/* ---------- Dark Mode ---------- */
+
+[data-theme="dark"] {
+  --bg-body: #0f172a;
+  --bg-card: #1e293b;
+  --bg-topbar: #1e293b;
+  --bg-input: #334155;
+  --bg-input-focus: #475569;
+  --bg-button: #334155;
+  --bg-button-hover: #475569;
+  --bg-table-even: #334155;
+  --bg-table-hover: #3b4c63;
+  --bg-summary: #334155;
+  --bg-calendar-legend: #334155;
+  
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  
+  --border-color: #334155;
+  --border-input: #475569;
+  
+  --accent-primary: #3b82f6;
+  --accent-primary-hover: #60a5fa;
+  
+  --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
 /* ---------- Base layout ---------- */
 
 *,
@@ -9,8 +65,9 @@
 body {
   margin: 0;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #f3f4f6;
-  color: #111827;
+  background: var(--bg-body);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .container {
@@ -24,19 +81,20 @@ p {
 }
 
 a {
-  color: #2563eb;
+  color: var(--accent-primary);
   text-decoration: none;
 }
 
 a:hover {
-  color: #1d4ed8;
+  color: var(--accent-primary-hover);
 }
 
 /* ---------- Top bar ---------- */
 
 .topbar {
-  background: #f9fafb;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--bg-topbar);
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .topbar-inner {
@@ -62,11 +120,11 @@ a:hover {
   gap: 0.5rem;
   font-weight: 600;
   font-size: 1rem;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .topbar-brand:hover {
-  color: #2563eb;
+  color: var(--accent-primary);
 }
 
 .brand-icon {
@@ -78,7 +136,7 @@ a:hover {
 
 .lang-toggle {
   font-size: 0.85rem;
-  color: #6b7280;
+  color: var(--text-secondary);
 }
 
 .lang-toggle a {
@@ -87,46 +145,66 @@ a:hover {
 }
 
 .lang-toggle a:hover {
-  color: #2563eb;
+  color: var(--accent-primary);
 }
 
 .lang-current {
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
+}
+
+/* ---------- Dark Mode Toggle ---------- */
+
+.theme-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s ease;
+}
+
+.theme-toggle:hover {
+  background: var(--bg-button);
 }
 
 /* ---------- Cards & typography ---------- */
 
 .card {
-  background: #ffffff;
+  background: var(--bg-card);
   border-radius: 1.25rem;
   padding: 2rem;
   margin-bottom: 1.5rem;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+  box-shadow: var(--shadow-card);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 h1 {
   margin: 0 0 0.5rem;
   font-size: 2rem;
+  color: var(--text-primary);
 }
 
 h2 {
   margin: 1.5rem 0 0.5rem;
   font-size: 1.3rem;
+  color: var(--text-primary);
 }
 
 h3 {
   margin: 1.25rem 0 0.5rem;
   font-size: 1.1rem;
+  color: var(--text-primary);
 }
 
 .subtitle {
   margin: 0 0 1.5rem;
-  color: #6b7280;
+  color: var(--text-secondary);
 }
 
 .muted-text {
-  color: #6b7280;
+  color: var(--text-secondary);
   font-size: 0.85rem;
 }
 
@@ -143,24 +221,25 @@ h3 {
   font-weight: 500;
   text-decoration: none;
   cursor: pointer;
-  background-color: #e5e7eb;
-  color: #111827;
+  background-color: var(--bg-button);
+  color: var(--text-primary);
   gap: 0.25rem;
+  transition: background-color 0.2s ease;
 }
 
 .button:hover {
-  background-color: #d1d5db;
+  background-color: var(--bg-button-hover);
 }
 
 .button.primary {
-  background-color: #2563eb;
-  border-color: #2563eb;
+  background-color: var(--accent-primary);
+  border-color: var(--accent-primary);
   color: #ffffff;
 }
 
 .button.primary:hover {
-  background-color: #1d4ed8;
-  border-color: #1d4ed8;
+  background-color: var(--accent-primary-hover);
+  border-color: var(--accent-primary-hover);
 }
 
 .button.small {
@@ -182,30 +261,38 @@ h3 {
   flex-direction: column;
   gap: 0.25rem;
   font-size: 0.9rem;
+  color: var(--text-primary);
 }
 
 .form input,
 .form select,
 .form textarea {
   border-radius: 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-input);
   padding: 0.6rem 0.75rem;
   font: inherit;
-  background: #f9fafb;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .form input:focus,
 .form select:focus,
 .form textarea:focus {
   outline: none;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 1px #2563eb1a;
-  background: #ffffff;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.1);
+  background: var(--bg-input-focus);
 }
 
 .form textarea {
   min-height: 100px;
   resize: vertical;
+}
+
+.form input:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 /* Setup page grid */
@@ -248,24 +335,32 @@ h3 {
 }
 
 .table thead th {
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border-color);
   font-weight: 600;
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  color: #6b7280;
+  color: var(--text-secondary);
 }
 
 .table tbody tr:nth-child(even) {
-  background-color: #f9fafb;
+  background-color: var(--bg-table-even);
 }
 
 .table tbody tr:hover {
-  background-color: #eff6ff;
+  background-color: var(--bg-table-hover);
+}
+
+.table td {
+  color: var(--text-primary);
 }
 
 .row-overdue {
-  background-color: #fef2f2;
+  background-color: rgba(254, 202, 202, 0.3) !important;
+}
+
+[data-theme="dark"] .row-overdue {
+  background-color: rgba(185, 28, 28, 0.2) !important;
 }
 
 /* ---------- Summary cards ---------- */
@@ -281,20 +376,22 @@ h3 {
   flex: 1 1 160px;
   padding: 1rem 1.2rem;
   border-radius: 1rem;
-  background: #f9fafb;
+  background: var(--bg-summary);
+  transition: background-color 0.3s ease;
 }
 
 .summary-label {
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #6b7280;
+  color: var(--text-secondary);
   margin-bottom: 0.35rem;
 }
 
 .summary-value {
   font-size: 1.4rem;
   font-weight: 600;
+  color: var(--text-primary);
 }
 
 /* ---------- Badges ---------- */
@@ -326,6 +423,22 @@ h3 {
   color: #b91c1c;
 }
 
+/* Dark mode badge adjustments */
+[data-theme="dark"] .status-paid {
+  background-color: rgba(22, 163, 74, 0.2);
+  color: #4ade80;
+}
+
+[data-theme="dark"] .status-partial {
+  background-color: rgba(234, 179, 8, 0.2);
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .status-unpaid {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
 /* Maintenance status badges */
 
 .status-open {
@@ -343,6 +456,21 @@ h3 {
   color: #166534;
 }
 
+[data-theme="dark"] .status-open {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+[data-theme="dark"] .status-in-progress {
+  background-color: rgba(234, 179, 8, 0.2);
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .status-completed {
+  background-color: rgba(22, 163, 74, 0.2);
+  color: #4ade80;
+}
+
 /* Priority badges */
 
 .priority-badge {
@@ -354,6 +482,11 @@ h3 {
   color: #1d4ed8;
 }
 
+.priority-normal {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
+
 .priority-medium {
   background-color: #fef9c3;
   color: #92400e;
@@ -362,6 +495,36 @@ h3 {
 .priority-high {
   background-color: #fee2e2;
   color: #b91c1c;
+}
+
+.priority-emergency {
+  background-color: #dc2626;
+  color: #ffffff;
+}
+
+[data-theme="dark"] .priority-low {
+  background-color: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
+[data-theme="dark"] .priority-normal {
+  background-color: rgba(107, 114, 128, 0.2);
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .priority-medium {
+  background-color: rgba(234, 179, 8, 0.2);
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .priority-high {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+[data-theme="dark"] .priority-emergency {
+  background-color: #dc2626;
+  color: #ffffff;
 }
 
 /* ---------- Flash messages ---------- */
@@ -397,6 +560,26 @@ h3 {
   color: #1d4ed8;
 }
 
+[data-theme="dark"] .flash-success {
+  background-color: rgba(22, 163, 74, 0.2);
+  color: #4ade80;
+}
+
+[data-theme="dark"] .flash-danger {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+[data-theme="dark"] .flash-warning {
+  background-color: rgba(234, 179, 8, 0.2);
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .flash-info {
+  background-color: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
 /* ---------- Misc ---------- */
 
 .category {
@@ -411,7 +594,7 @@ h3 {
   width: 80px;
   height: auto;
   border-radius: 0.5rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-color);
   object-fit: cover;
 }
 
@@ -422,9 +605,18 @@ h3 {
   border-left: 4px solid #f59e0b;
 }
 
+[data-theme="dark"] .announcement-card {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.2) 100%);
+  border-left: 4px solid #f59e0b;
+}
+
 .announcement-card h2 {
   margin-top: 0;
   color: #92400e;
+}
+
+[data-theme="dark"] .announcement-card h2 {
+  color: #fbbf24;
 }
 
 .announcement {
@@ -436,9 +628,17 @@ h3 {
   color: #78350f;
 }
 
+[data-theme="dark"] .announcement h3 {
+  color: #fcd34d;
+}
+
 .announcement p {
   margin: 0 0 0.5rem;
   color: #451a03;
+}
+
+[data-theme="dark"] .announcement p {
+  color: #fef3c7;
 }
 
 .announcement hr {
@@ -447,11 +647,15 @@ h3 {
   margin: 1rem 0;
 }
 
+[data-theme="dark"] .announcement hr {
+  border-top-color: rgba(252, 211, 77, 0.3);
+}
+
 /* ---------- Form hints ---------- */
 
 .form-hint {
   font-size: 0.8rem;
-  color: #6b7280;
+  color: var(--text-secondary);
   margin-top: 0.25rem;
 }
 
@@ -467,6 +671,16 @@ h3 {
   background-color: #fecaca;
 }
 
+[data-theme="dark"] .button.danger {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+[data-theme="dark"] .button.danger:hover {
+  background-color: rgba(239, 68, 68, 0.3);
+}
+
 /* ---------- Overdue badge ---------- */
 
 .overdue-badge {
@@ -479,4 +693,73 @@ h3 {
   background-color: #fee2e2;
   color: #b91c1c;
   margin-left: 0.4rem;
+}
+
+[data-theme="dark"] .overdue-badge {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+/* ---------- Calendar Dark Mode ---------- */
+
+[data-theme="dark"] .fc {
+  --fc-page-bg-color: var(--bg-card);
+  --fc-neutral-bg-color: var(--bg-summary);
+  --fc-border-color: var(--border-color);
+  --fc-button-bg-color: var(--bg-button);
+  --fc-button-border-color: var(--border-color);
+  --fc-button-text-color: var(--text-primary);
+  --fc-button-hover-bg-color: var(--bg-button-hover);
+  --fc-button-hover-border-color: var(--border-color);
+  --fc-button-active-bg-color: var(--accent-primary);
+  --fc-button-active-border-color: var(--accent-primary);
+  --fc-today-bg-color: rgba(59, 130, 246, 0.15);
+  --fc-list-event-hover-bg-color: var(--bg-table-hover);
+}
+
+[data-theme="dark"] .fc-theme-standard td,
+[data-theme="dark"] .fc-theme-standard th {
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .fc-col-header-cell-cushion,
+[data-theme="dark"] .fc-daygrid-day-number,
+[data-theme="dark"] .fc-list-day-text,
+[data-theme="dark"] .fc-list-day-side-text {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .fc-daygrid-day.fc-day-other .fc-daygrid-day-number {
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .fc-list-event-title a {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .fc-toolbar-title {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .fc .fc-button {
+  background-color: var(--bg-button);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .fc .fc-button:hover {
+  background-color: var(--bg-button-hover);
+}
+
+[data-theme="dark"] .fc .fc-button-primary:not(:disabled).fc-button-active,
+[data-theme="dark"] .fc .fc-button-primary:not(:disabled):active {
+  background-color: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+
+/* ---------- Select dropdown in dark mode ---------- */
+
+[data-theme="dark"] select option {
+  background-color: var(--bg-card);
+  color: var(--text-primary);
 }

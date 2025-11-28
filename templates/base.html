@@ -9,6 +9,14 @@
 
     <!-- App icon / favicon -->
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='app-icon.png') }}">
+
+    <!-- Prevent flash of wrong theme -->
+    <script>
+      (function() {
+        const theme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+      })();
+    </script>
   </head>
   <body>
     <header class="topbar">
@@ -29,6 +37,11 @@
           {% else %}
             <a class="button small" href="{{ url_for('login') }}">{{ t('nav_login') }}</a>
           {% endif %}
+
+          <!-- Dark mode toggle -->
+          <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode" aria-label="Toggle dark mode">
+            <span id="theme-icon">🌙</span>
+          </button>
 
           <!-- Language selector -->
           <span class="lang-toggle">
@@ -60,5 +73,31 @@
 
       {% block content %}{% endblock %}
     </main>
+
+    <!-- Dark mode toggle script -->
+    <script>
+      function toggleTheme() {
+        const html = document.documentElement;
+        const currentTheme = html.getAttribute('data-theme') || 'light';
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        
+        html.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        updateThemeIcon(newTheme);
+      }
+
+      function updateThemeIcon(theme) {
+        const icon = document.getElementById('theme-icon');
+        if (icon) {
+          icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+        }
+      }
+
+      // Set correct icon on page load
+      document.addEventListener('DOMContentLoaded', function() {
+        const theme = localStorage.getItem('theme') || 'light';
+        updateThemeIcon(theme);
+      });
+    </script>
   </body>
 </html>
