@@ -913,6 +913,9 @@ def tenant_dashboard():
         else:
             logger.warning("No active lease found for tenant id=%s", user["id"])
 
+        # Get announcements from landlord
+        announcements = get_announcements_for_tenant(user["id"])
+
         return render_template(
             "tenant_dashboard.html",
             user=user,
@@ -922,6 +925,7 @@ def tenant_dashboard():
             rent_paid=rent_paid,
             rent_status=rent_status,
             recent_payments=recent_payments,
+            announcements=announcements,
         )
     except Exception as e:
         logger.exception("Error loading tenant dashboard: %s", e)
@@ -1663,6 +1667,333 @@ def landlord_update_request_status(request_id):
         flash("Error updating status. Please try again.", "danger")
     
     return redirect(url_for("landlord_requests"))
+
+
+# -----------------------
+# Announcements
+# -----------------------
+
+@app.route("/landlord/announcements")
+@login_required(role="landlord")
+def landlord_announcements():
+    """View and manage announcements."""
+    user = get_current_user()
+    logger.debug("Announcements page for landlord id=%s", user["id"])
+    
+    try:
+        supabase = require_supabase()
+        resp = (
+            supabase.table("announcements")
+            .select("*")
+            .eq("landlord_id", user["id"])
+            .order("created_at", desc=True)
+            .execute()
+        )
+        announcements = resp.data or []
+        return render_template("landlord_announcements.html", user=user, announcements=announcements)
+    except Exception as e:
+        logger.exception("Error loading announcements: %s", e)
+        flash("Error loading announcements.", "danger")
+        return redirect(url_for("landlord_dashboard"))
+
+
+@app.route("/landlord/announcements/new", methods=["GET", "POST"])
+@login_required(role="landlord")
+def landlord_new_announcement():
+    """Create a new announcement."""
+    user = get_current_user()
+    
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        content = request.form.get("content", "").strip()
+        expires_at = request.form.get("expires_at", "").strip() or None
+        
+        if not title or not content:
+            flash("Please fill in both title and content.", "warning")
+            return render_template("landlord_announcement_form.html", user=user)
+        
+        try:
+            supabase = require_supabase()
+            supabase.table("announcements").insert({
+                "landlord_id": user["id"],
+                "title": title,
+                "content": content,
+                "is_active": True,
+                "expires_at": expires_at,
+            }).execute()
+            
+            logger.info("Announcement created by landlord id=%s: %s", user["id"], title)
+            flash("Announcement posted!", "success")
+            return redirect(url_for("landlord_announcements"))
+        except Exception as e:
+            logger.exception("Error creating announcement: %s", e)
+            flash("Error creating announcement.", "danger")
+    
+    return render_template("landlord_announcement_form.html", user=user)
+
+
+@app.route("/landlord/announcements/<int:announcement_id>/toggle", methods=["POST"])
+@login_required(role="landlord")
+def landlord_toggle_announcement(announcement_id):
+    """Toggle announcement active status."""
+    user = get_current_user()
+    
+    try:
+        supabase = require_supabase()
+        
+        # Get current status
+        resp = (
+            supabase.table("announcements")
+            .select("is_active")
+            .eq("id", announcement_id)
+            .eq("landlord_id", user["id"])
+            .limit(1)
+            .execute()
+        )
+        
+        if not resp.data:
+            flash("Announcement not found.", "danger")
+            return redirect(url_for("landlord_announcements"))
+        
+        new_status = not resp.data[0]["is_active"]
+        supabase.table("announcements").update({"is_active": new_status}).eq("id", announcement_id).execute()
+        
+        logger.info("Announcement id=%s toggled to is_active=%s", announcement_id, new_status)
+        flash("Announcement updated.", "success")
+    except Exception as e:
+        logger.exception("Error toggling announcement: %s", e)
+        flash("Error updating announcement.", "danger")
+    
+    return redirect(url_for("landlord_announcements"))
+
+
+@app.route("/landlord/announcements/<int:announcement_id>/delete", methods=["POST"])
+@login_required(role="landlord")
+def landlord_delete_announcement(announcement_id):
+    """Delete an announcement."""
+    user = get_current_user()
+    
+    try:
+        supabase = require_supabase()
+        supabase.table("announcements").delete().eq("id", announcement_id).eq("landlord_id", user["id"]).execute()
+        
+        logger.info("Announcement id=%s deleted by landlord id=%s", announcement_id, user["id"])
+        flash("Announcement deleted.", "success")
+    except Exception as e:
+        logger.exception("Error deleting announcement: %s", e)
+        flash("Error deleting announcement.", "danger")
+    
+    return redirect(url_for("landlord_announcements"))
+
+
+def get_announcements_for_tenant(tenant_id):
+    """Get active announcements for a tenant from their landlord(s)."""
+    try:
+        supabase = require_supabase()
+        
+        # Get landlord IDs from tenant's active leases
+        leases_resp = (
+            supabase.table("leases")
+            .select("landlord_id")
+            .eq("tenant_id", tenant_id)
+            .eq("is_active", True)
+            .execute()
+        )
+        landlord_ids = list(set(l["landlord_id"] for l in (leases_resp.data or [])))
+        
+        if not landlord_ids:
+            return []
+        
+        # Get active announcements from those landlords
+        now = datetime.datetime.utcnow().isoformat()
+        resp = (
+            supabase.table("announcements")
+            .select("*")
+            .in_("landlord_id", landlord_ids)
+            .eq("is_active", True)
+            .order("created_at", desc=True)
+            .execute()
+        )
+        
+        # Filter out expired announcements
+        announcements = []
+        for a in (resp.data or []):
+            if a.get("expires_at"):
+                if a["expires_at"] > now:
+                    announcements.append(a)
+            else:
+                announcements.append(a)
+        
+        return announcements
+    except Exception as e:
+        logger.exception("Error fetching announcements for tenant id=%s: %s", tenant_id, e)
+        return []
+
+
+# -----------------------
+# Calendar View
+# -----------------------
+
+@app.route("/calendar")
+@login_required()
+def calendar_view():
+    """Display calendar view with events."""
+    user = get_current_user()
+    logger.debug("Calendar view for user id=%s role=%s", user["id"], user["role"])
+    return render_template("calendar.html", user=user)
+
+
+@app.route("/api/calendar-events")
+@login_required()
+def calendar_events():
+    """API endpoint returning calendar events as JSON."""
+    user = get_current_user()
+    events = []
+    
+    try:
+        supabase = require_supabase()
+        
+        if user["role"] == "tenant":
+            # Get tenant's lease info
+            lease = get_active_lease_for_tenant(user["id"])
+            if lease:
+                # Rent due dates (for next 12 months)
+                today = datetime.date.today()
+                for i in range(12):
+                    month = (today.month + i - 1) % 12 + 1
+                    year = today.year + ((today.month + i - 1) // 12)
+                    due_day = min(lease["due_day"], 28)  # Handle short months
+                    due_date = datetime.date(year, month, due_day)
+                    
+                    events.append({
+                        "title": f"Rent Due (${lease['monthly_rent']:.0f})",
+                        "start": due_date.isoformat(),
+                        "color": "#e74c3c",
+                        "type": "rent_due"
+                    })
+                
+                # Lease dates
+                if lease.get("start_date"):
+                    events.append({
+                        "title": "Lease Start",
+                        "start": lease["start_date"],
+                        "color": "#27ae60",
+                        "type": "lease"
+                    })
+                if lease.get("end_date"):
+                    events.append({
+                        "title": "Lease End",
+                        "start": lease["end_date"],
+                        "color": "#e67e22",
+                        "type": "lease"
+                    })
+            
+            # Maintenance requests
+            requests_resp = (
+                supabase.table("maintenance_requests")
+                .select("id, title, created_at, status")
+                .eq("tenant_id", user["id"])
+                .execute()
+            )
+            for r in (requests_resp.data or []):
+                created = r["created_at"][:10] if r.get("created_at") else None
+                if created:
+                    color = "#3498db" if r["status"] == "Open" else "#95a5a6"
+                    events.append({
+                        "title": f"🔧 {r['title']}",
+                        "start": created,
+                        "color": color,
+                        "type": "maintenance"
+                    })
+        
+        else:  # Landlord
+            # Get all active leases
+            leases_resp = (
+                supabase.table("leases")
+                .select("id, tenant_id, monthly_rent, due_day, start_date, end_date")
+                .eq("landlord_id", user["id"])
+                .eq("is_active", True)
+                .execute()
+            )
+            leases = leases_resp.data or []
+            
+            # Get tenant names
+            tenant_ids = list(set(l["tenant_id"] for l in leases))
+            if tenant_ids:
+                tenants_resp = supabase.table("users").select("id, full_name, username").in_("id", tenant_ids).execute()
+                tenant_map = {t["id"]: t.get("full_name") or t.get("username") for t in (tenants_resp.data or [])}
+            else:
+                tenant_map = {}
+            
+            today = datetime.date.today()
+            for lease in leases:
+                tenant_name = tenant_map.get(lease["tenant_id"], "Tenant")
+                
+                # Rent due dates (next 12 months)
+                for i in range(12):
+                    month = (today.month + i - 1) % 12 + 1
+                    year = today.year + ((today.month + i - 1) // 12)
+                    due_day = min(lease["due_day"], 28)
+                    due_date = datetime.date(year, month, due_day)
+                    
+                    events.append({
+                        "title": f"💰 {tenant_name} (${lease['monthly_rent']:.0f})",
+                        "start": due_date.isoformat(),
+                        "color": "#e74c3c",
+                        "type": "rent_due"
+                    })
+                
+                # Lease dates
+                if lease.get("end_date"):
+                    events.append({
+                        "title": f"📋 {tenant_name} Lease Ends",
+                        "start": lease["end_date"],
+                        "color": "#e67e22",
+                        "type": "lease"
+                    })
+            
+            # Maintenance requests from tenants
+            if tenant_ids:
+                requests_resp = (
+                    supabase.table("maintenance_requests")
+                    .select("id, tenant_id, title, created_at, status")
+                    .in_("tenant_id", tenant_ids)
+                    .execute()
+                )
+                for r in (requests_resp.data or []):
+                    created = r["created_at"][:10] if r.get("created_at") else None
+                    if created:
+                        tenant_name = tenant_map.get(r["tenant_id"], "Tenant")
+                        color = "#3498db" if r["status"] == "Open" else "#95a5a6"
+                        events.append({
+                            "title": f"🔧 {tenant_name}: {r['title']}",
+                            "start": created,
+                            "color": color,
+                            "type": "maintenance"
+                        })
+            
+            # Announcements
+            announcements_resp = (
+                supabase.table("announcements")
+                .select("id, title, created_at")
+                .eq("landlord_id", user["id"])
+                .execute()
+            )
+            for a in (announcements_resp.data or []):
+                created = a["created_at"][:10] if a.get("created_at") else None
+                if created:
+                    events.append({
+                        "title": f"📢 {a['title']}",
+                        "start": created,
+                        "color": "#9b59b6",
+                        "type": "announcement"
+                    })
+        
+        return {"events": events}
+    
+    except Exception as e:
+        logger.exception("Error fetching calendar events: %s", e)
+        return {"events": [], "error": str(e)}
 
 
 # -----------------------

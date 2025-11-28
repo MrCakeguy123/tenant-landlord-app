@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="card">
+    <h1>📢 New Announcement</h1>
+    <p class="subtitle">Post a notice to all your tenants</p>
+  </section>
+
+  <section class="card">
+    <form method="post" action="{{ url_for('landlord_new_announcement') }}" class="form">
+      <label>
+        Title
+        <input type="text" name="title" required placeholder="e.g., Water Shutoff Notice">
+      </label>
+      <label>
+        Content
+        <textarea name="content" rows="5" required placeholder="Enter the announcement details..."></textarea>
+      </label>
+      <label>
+        Expires (optional)
+        <input type="date" name="expires_at">
+        <small class="form-hint">Leave empty for no expiration</small>
+      </label>
+      <button class="button primary" type="submit">Post Announcement</button>
+      <a class="button" href="{{ url_for('landlord_announcements') }}">Cancel</a>
+    </form>
+  </section>
+{% endblock %}
+

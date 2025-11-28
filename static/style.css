@@ -414,3 +414,69 @@ h3 {
   border: 1px solid #e5e7eb;
   object-fit: cover;
 }
+
+/* ---------- Announcements ---------- */
+
+.announcement-card {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-left: 4px solid #f59e0b;
+}
+
+.announcement-card h2 {
+  margin-top: 0;
+  color: #92400e;
+}
+
+.announcement {
+  padding: 0.5rem 0;
+}
+
+.announcement h3 {
+  margin: 0 0 0.5rem;
+  color: #78350f;
+}
+
+.announcement p {
+  margin: 0 0 0.5rem;
+  color: #451a03;
+}
+
+.announcement hr {
+  border: none;
+  border-top: 1px solid #fcd34d;
+  margin: 1rem 0;
+}
+
+/* ---------- Form hints ---------- */
+
+.form-hint {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+/* ---------- Danger button ---------- */
+
+.button.danger {
+  background-color: #fee2e2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.button.danger:hover {
+  background-color: #fecaca;
+}
+
+/* ---------- Overdue badge ---------- */
+
+.overdue-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background-color: #fee2e2;
+  color: #b91c1c;
+  margin-left: 0.4rem;
+}

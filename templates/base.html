@@ -23,6 +23,7 @@
         <div class="topbar-right">
           {% if session.get('user_id') %}
             <a class="button small" href="{{ url_for('dashboard') }}">{{ t('nav_dashboard') }}</a>
+            <a class="button small" href="{{ url_for('calendar_view') }}">📆</a>
             <a class="button small" href="{{ url_for('settings') }}">⚙️</a>
             <a class="button small" href="{{ url_for('logout') }}">{{ t('nav_logout') }}</a>
           {% else %}

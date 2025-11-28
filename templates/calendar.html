@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="card">
+    <h1>📆 Calendar</h1>
+    <p class="subtitle">View rent due dates, lease dates, and maintenance requests</p>
+    <p>
+      <a class="button" href="{{ url_for('dashboard') }}">← Back to Dashboard</a>
+    </p>
+  </section>
+
+  <section class="card">
+    <div class="calendar-legend">
+      <span class="legend-item"><span class="legend-color" style="background:#e74c3c;"></span> Rent Due</span>
+      <span class="legend-item"><span class="legend-color" style="background:#27ae60;"></span> Lease Start</span>
+      <span class="legend-item"><span class="legend-color" style="background:#e67e22;"></span> Lease End</span>
+      <span class="legend-item"><span class="legend-color" style="background:#3498db;"></span> Maintenance (Open)</span>
+      <span class="legend-item"><span class="legend-color" style="background:#95a5a6;"></span> Maintenance (Closed)</span>
+      {% if user.role == 'landlord' %}
+      <span class="legend-item"><span class="legend-color" style="background:#9b59b6;"></span> Announcement</span>
+      {% endif %}
+    </div>
+    <div id="calendar"></div>
+  </section>
+
+  <!-- FullCalendar CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
+  
+  <!-- FullCalendar JS -->
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+  
+  <style>
+    #calendar {
+      max-width: 100%;
+      margin-top: 1rem;
+    }
+    .calendar-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      padding: 0.75rem;
+      background: var(--color-bg-alt, #f5f5f5);
+      border-radius: 8px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+    }
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+    }
+    .fc-event {
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .fc-toolbar-title {
+      font-size: 1.25rem !important;
+    }
+    @media (max-width: 600px) {
+      .fc-toolbar {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      .calendar-legend {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+    }
+  </style>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      var calendarEl = document.getElementById('calendar');
+      var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        headerToolbar: {
+          left: 'prev,next today',
+          center: 'title',
+          right: 'dayGridMonth,listMonth'
+        },
+        events: function(info, successCallback, failureCallback) {
+          fetch('{{ url_for("calendar_events") }}')
+            .then(response => response.json())
+            .then(data => {
+              successCallback(data.events || []);
+            })
+            .catch(error => {
+              console.error('Error loading events:', error);
+              failureCallback(error);
+            });
+        },
+        eventDisplay: 'block',
+        dayMaxEvents: 3,
+        moreLinkClick: 'popover'
+      });
+      calendar.render();
+    });
+  </script>
+{% endblock %}
+
