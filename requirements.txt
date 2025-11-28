@@ -2,3 +2,4 @@ Flask
 gunicorn
 stripe
 requests
+supabase

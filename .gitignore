@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# Local database (no longer used - using Supabase)
+*.db
+
+# Uploads (stored in Supabase Storage in production)
+static/uploads/*
+!static/uploads/.gitkeep

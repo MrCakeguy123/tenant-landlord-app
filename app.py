@@ -1,14 +1,15 @@
 import os
 import uuid
-import sqlite3
 import logging
 import datetime
 import json
 
 import requests
 import stripe
-from flask import Flask, g, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.utils import secure_filename
+
+from supabase_client import get_supabase
 
 
 # -----------------------
@@ -16,8 +17,7 @@ from werkzeug.utils import secure_filename
 # -----------------------
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "change-me-in-production"  # override with env in production
-app.config["DATABASE"] = os.path.join(os.path.dirname(__file__), "tenantlandlord.db")
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "change-me-in-production")
 app.config["UPLOAD_FOLDER"] = os.path.join(app.root_path, "static", "uploads")
 
 ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
@@ -266,163 +266,61 @@ def set_language(lang):
 
 
 # -----------------------
-# Database Helpers
+# Supabase Database Helpers
 # -----------------------
 
-def get_db():
-    if "db" not in g:
-        logger.debug("Opening new database connection.")
-        g.db = sqlite3.connect(app.config["DATABASE"])
-        g.db.row_factory = sqlite3.Row
-    return g.db
+def require_supabase():
+    """Get Supabase client or raise an error."""
+    supabase = get_supabase()
+    if supabase is None:
+        raise RuntimeError("Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.")
+    return supabase
 
-
-@app.teardown_appcontext
-def close_db(exception):
-    db = g.pop("db", None)
-    if db is not None:
-        logger.debug("Closing database connection.")
-        db.close()
-
-
-def init_db():
-    """Initialize or migrate the database with required tables."""
-    db = get_db()
-    logger.info("Initializing database schema if not present.")
-    db.executescript(
-        """
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            role TEXT NOT NULL CHECK (role IN ('tenant', 'landlord')),
-            full_name TEXT,
-            email TEXT
-        );
-
-        CREATE TABLE IF NOT EXISTS leases (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            tenant_id INTEGER NOT NULL,
-            landlord_id INTEGER NOT NULL,
-            monthly_rent REAL NOT NULL,
-            due_day INTEGER NOT NULL DEFAULT 1,
-            start_date DATE,
-            end_date DATE,
-            is_active INTEGER NOT NULL DEFAULT 1,
-            FOREIGN KEY (tenant_id) REFERENCES users(id),
-            FOREIGN KEY (landlord_id) REFERENCES users(id)
-        );
-
-        CREATE TABLE IF NOT EXISTS rent_payments (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            lease_id INTEGER NOT NULL,
-            amount REAL NOT NULL,
-            month INTEGER NOT NULL,
-            year INTEGER NOT NULL,
-            status TEXT NOT NULL DEFAULT 'Paid',
-            paid_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            method TEXT,
-            note TEXT,
-            FOREIGN KEY (lease_id) REFERENCES leases(id)
-        );
-
-        CREATE TABLE IF NOT EXISTS maintenance_requests (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            tenant_id INTEGER NOT NULL,
-            title TEXT NOT NULL,
-            description TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'Open',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            priority TEXT NOT NULL DEFAULT 'Normal',
-            image_filename TEXT,
-            FOREIGN KEY (tenant_id) REFERENCES users(id)
-        );
-        """
-    )
-    db.commit()
-    logger.info("Database schema ensured (tables created if they did not exist).")
-
-
-def ensure_maintenance_priority_column():
-    """
-    Ensure the 'priority' column exists on maintenance_requests for older databases.
-    Safe to call multiple times.
-    """
-    db = get_db()
-    try:
-        logger.debug("Ensuring 'priority' column exists on maintenance_requests.")
-        db.execute(
-            "ALTER TABLE maintenance_requests "
-            "ADD COLUMN priority TEXT NOT NULL DEFAULT 'Normal'"
-        )
-        db.commit()
-        logger.info("Added 'priority' column to maintenance_requests table.")
-    except sqlite3.OperationalError as e:
-        msg = str(e)
-        if "duplicate column name" in msg or "already exists" in msg:
-            logger.debug(
-                "'priority' column already exists on maintenance_requests; no migration needed."
-            )
-        else:
-            logger.exception("Unexpected error while ensuring 'priority' column: %s", e)
-
-
-def ensure_maintenance_image_column():
-    """Ensure an image filename column exists for maintenance requests."""
-
-    db = get_db()
-    try:
-        logger.debug("Ensuring 'image_filename' column exists on maintenance_requests.")
-        db.execute(
-            "ALTER TABLE maintenance_requests "
-            "ADD COLUMN image_filename TEXT"
-        )
-        db.commit()
-        logger.info("Added 'image_filename' column to maintenance_requests table.")
-    except sqlite3.OperationalError as e:
-        msg = str(e)
-        if "duplicate column name" in msg or "already exists" in msg:
-            logger.debug(
-                "'image_filename' column already exists on maintenance_requests; no migration needed."
-            )
-        else:
-            logger.exception("Unexpected error while ensuring 'image_filename' column: %s", e)
-
-
-def run_startup_migrations():
-    """
-    Run one-time startup migrations such as adding new columns.
-    This is called explicitly at startup instead of using Flask's
-    removed `before_first_request` hook (Flask 3.x compatibility).
-    """
-    logger.debug("Running startup migrations at app startup.")
-    ensure_maintenance_priority_column()
-    ensure_maintenance_image_column()
-
-
-with app.app_context():
-    # Ensure DB migrations run when the app starts up (and log it).
-    logger.debug("Entering app context to run startup migrations.")
-    run_startup_migrations()
 
 # -----------------------
 # Utility Helpers
 # -----------------------
 
 def get_user(user_id):
-    db = get_db()
-    user = db.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-    logger.debug("Fetched user for user_id %s: %s", user_id, dict(user) if user else None)
-    return user
+    """Fetch a single user by id from Supabase."""
+    try:
+        supabase = require_supabase()
+        logger.debug("Fetching user by id=%s", user_id)
+        resp = (
+            supabase.table("users")
+            .select("*")
+            .eq("id", user_id)
+            .limit(1)
+            .execute()
+        )
+        rows = resp.data or []
+        user = rows[0] if rows else None
+        logger.debug("Fetched user id=%s -> %s", user_id, user)
+        return user
+    except Exception as e:
+        logger.exception("Error fetching user id=%s: %s", user_id, e)
+        return None
 
 
 def get_user_by_username(username):
-    db = get_db()
-    user = db.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
-    logger.debug(
-        "Fetched user for username %s: %s", username, dict(user) if user else None
-    )
-    return user
+    """Fetch a single user by username from Supabase."""
+    try:
+        supabase = require_supabase()
+        logger.debug("Fetching user with username=%s", username)
+        resp = (
+            supabase.table("users")
+            .select("*")
+            .eq("username", username)
+            .limit(1)
+            .execute()
+        )
+        rows = resp.data or []
+        user = rows[0] if rows else None
+        logger.debug("Fetched user username=%s -> %s", username, user)
+        return user
+    except Exception as e:
+        logger.exception("Error fetching user by username=%s: %s", username, e)
+        return None
 
 
 def get_current_month_year():
@@ -432,28 +330,45 @@ def get_current_month_year():
 
 
 def get_active_lease_for_tenant(tenant_id):
-    db = get_db()
-    lease = db.execute(
-        """
-        SELECT l.*, t.full_name as tenant_name, ll.full_name as landlord_name
-        FROM leases l
-        JOIN users t ON t.id = l.tenant_id
-        JOIN users ll ON ll.id = l.landlord_id
-        WHERE l.tenant_id = ? AND l.is_active = 1
-        ORDER BY l.id DESC
-        LIMIT 1
-        """,
-        (tenant_id,),
-    ).fetchone()
-    logger.debug(
-        "Active lease for tenant_id %s: %s", tenant_id, dict(lease) if lease else None
-    )
-    return lease
+    """Get the active lease for a tenant, including landlord/tenant names."""
+    try:
+        supabase = require_supabase()
+        # First get the lease
+        resp = (
+            supabase.table("leases")
+            .select("*")
+            .eq("tenant_id", tenant_id)
+            .eq("is_active", True)
+            .order("id", desc=True)
+            .limit(1)
+            .execute()
+        )
+        rows = resp.data or []
+        if not rows:
+            logger.debug("No active lease found for tenant_id=%s", tenant_id)
+            return None
+        
+        lease = rows[0]
+        
+        # Get tenant name
+        tenant_resp = supabase.table("users").select("full_name").eq("id", tenant_id).limit(1).execute()
+        if tenant_resp.data:
+            lease["tenant_name"] = tenant_resp.data[0].get("full_name")
+        
+        # Get landlord name
+        landlord_resp = supabase.table("users").select("full_name").eq("id", lease["landlord_id"]).limit(1).execute()
+        if landlord_resp.data:
+            lease["landlord_name"] = landlord_resp.data[0].get("full_name")
+        
+        logger.debug("Active lease for tenant_id %s: %s", tenant_id, lease)
+        return lease
+    except Exception as e:
+        logger.exception("Error fetching active lease for tenant_id=%s: %s", tenant_id, e)
+        return None
 
 
 def allowed_image_file(filename):
     """Return True if the provided filename has an allowed image extension."""
-
     if not filename or "." not in filename:
         return False
     ext = filename.rsplit(".", 1)[-1].lower()
@@ -461,51 +376,71 @@ def allowed_image_file(filename):
 
 
 def get_rent_status_for_lease(lease_id, monthly_rent, month, year):
-    db = get_db()
-    row = db.execute(
-        """
-        SELECT COALESCE(SUM(CASE WHEN status = 'Paid' THEN amount ELSE 0 END), 0) as paid
-        FROM rent_payments
-        WHERE lease_id = ? AND month = ? AND year = ?
-        """,
-        (lease_id, month, year),
-    ).fetchone()
-    paid = row["paid"] if row else 0
-    if paid >= monthly_rent:
-        status = "Paid"
-    elif paid > 0:
-        status = "Partial"
-    else:
-        status = "Unpaid"
-    logger.debug(
-        "Rent status for lease_id=%s month=%s year=%s: paid=%.2f status=%s (monthly_rent=%.2f)",
-        lease_id,
-        month,
-        year,
-        paid,
-        status,
-        monthly_rent,
-    )
-    return paid, status
+    """Calculate rent payment status for a specific lease and month."""
+    try:
+        supabase = require_supabase()
+        resp = (
+            supabase.table("rent_payments")
+            .select("amount, status")
+            .eq("lease_id", lease_id)
+            .eq("month", month)
+            .eq("year", year)
+            .execute()
+        )
+        rows = resp.data or []
+        paid = sum(row["amount"] for row in rows if row.get("status") == "Paid")
+        
+        if paid >= monthly_rent:
+            status = "Paid"
+        elif paid > 0:
+            status = "Partial"
+        else:
+            status = "Unpaid"
+        
+        logger.debug(
+            "Rent status for lease_id=%s month=%s year=%s: paid=%.2f status=%s (monthly_rent=%.2f)",
+            lease_id, month, year, paid, status, monthly_rent,
+        )
+        return paid, status
+    except Exception as e:
+        logger.exception("Error getting rent status for lease_id=%s: %s", lease_id, e)
+        return 0, "Unknown"
 
 
 def get_recent_rent_payments_for_tenant(tenant_id, limit=5):
-    db = get_db()
-    rows = db.execute(
-        """
-        SELECT rp.*, l.monthly_rent
-        FROM rent_payments rp
-        JOIN leases l ON l.id = rp.lease_id
-        WHERE l.tenant_id = ?
-        ORDER BY rp.paid_at DESC
-        LIMIT ?
-        """,
-        (tenant_id, limit),
-    ).fetchall()
-    logger.debug(
-        "Loaded %d recent rent payments for tenant_id=%s", len(rows), tenant_id
-    )
-    return rows
+    """Get recent rent payments for a tenant."""
+    try:
+        supabase = require_supabase()
+        # First get tenant's leases
+        leases_resp = supabase.table("leases").select("id, monthly_rent").eq("tenant_id", tenant_id).execute()
+        leases = leases_resp.data or []
+        
+        if not leases:
+            return []
+        
+        lease_ids = [l["id"] for l in leases]
+        lease_rent_map = {l["id"]: l["monthly_rent"] for l in leases}
+        
+        # Get payments for those leases
+        payments_resp = (
+            supabase.table("rent_payments")
+            .select("*")
+            .in_("lease_id", lease_ids)
+            .order("paid_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        payments = payments_resp.data or []
+        
+        # Add monthly_rent to each payment
+        for p in payments:
+            p["monthly_rent"] = lease_rent_map.get(p["lease_id"], 0)
+        
+        logger.debug("Loaded %d recent rent payments for tenant_id=%s", len(payments), tenant_id)
+        return payments
+    except Exception as e:
+        logger.exception("Error fetching recent payments for tenant_id=%s: %s", tenant_id, e)
+        return []
 
 
 # -----------------------
@@ -585,105 +520,100 @@ def index():
     return render_template("index.html")
 
 
-@app.route("/init-db")
-def init_db_route():
-    """Manual route to (re)initialize DB tables (no demo data)."""
-    logger.warning("init-db route called; reinitializing DB schema.")
-    init_db()
-    flash("Database initialized.", "success")
-    return redirect(url_for("index"))
-
-
 @app.route("/setup", methods=["GET", "POST"])
 def setup():
     """Initial setup route to create a landlord and a tenant."""
-    db = get_db()
     logger.debug("Setup route accessed with method=%s", request.method)
-    existing_users = db.execute("SELECT COUNT(*) as c FROM users").fetchone()["c"]
-    if existing_users > 0:
-        logger.info("Setup attempted but users already exist; redirecting to index.")
-        flash("Setup has already been completed.", "info")
-        return redirect(url_for("index"))
+    
+    try:
+        supabase = require_supabase()
+        
+        # Check if users already exist
+        existing = supabase.table("users").select("id").limit(1).execute()
+        if existing.data:
+            logger.info("Setup attempted but users already exist; redirecting to index.")
+            flash("Setup has already been completed.", "info")
+            return redirect(url_for("index"))
+        
+        if request.method == "POST":
+            landlord_username = request.form.get("landlord_username", "").strip()
+            landlord_password = request.form.get("landlord_password", "").strip()
+            landlord_full_name = request.form.get("landlord_full_name", "").strip()
+            landlord_email = request.form.get("landlord_email", "").strip()
 
-    if request.method == "POST":
-        landlord_username = request.form.get("landlord_username", "").strip()
-        landlord_password = request.form.get("landlord_password", "").strip()
-        landlord_full_name = request.form.get("landlord_full_name", "").strip()
-        landlord_email = request.form.get("landlord_email", "").strip()
+            tenant_username = request.form.get("tenant_username", "").strip()
+            tenant_password = request.form.get("tenant_password", "").strip()
+            tenant_full_name = request.form.get("tenant_full_name", "").strip()
+            tenant_email = request.form.get("tenant_email", "").strip()
 
-        tenant_username = request.form.get("tenant_username", "").strip()
-        tenant_password = request.form.get("tenant_password", "").strip()
-        tenant_full_name = request.form.get("tenant_full_name", "").strip()
-        tenant_email = request.form.get("tenant_email", "").strip()
+            monthly_rent_raw = request.form.get("monthly_rent", "").strip()
+            due_day_raw = request.form.get("due_day", "").strip()
 
-        monthly_rent_raw = request.form.get("monthly_rent", "").strip()
-        due_day_raw = request.form.get("due_day", "").strip()
-
-        logger.debug(
-            "Setup form submitted with landlord_username=%s, tenant_username=%s, monthly_rent_raw=%s, due_day_raw=%s",
-            landlord_username,
-            tenant_username,
-            monthly_rent_raw,
-            due_day_raw,
-        )
-
-        if not all(
-            [
-                landlord_username,
-                landlord_password,
-                tenant_username,
-                tenant_password,
-                monthly_rent_raw,
-                due_day_raw,
-            ]
-        ):
-            flash("Please fill in all required fields.", "warning")
-            return render_template("setup.html")
-
-        try:
-            monthly_rent = float(monthly_rent_raw)
-            due_day = int(due_day_raw)
-        except ValueError:
-            logger.warning("Invalid monthly_rent or due_day entered during setup.")
-            flash(
-                "Monthly rent must be a number and due day must be an integer.",
-                "warning",
+            logger.debug(
+                "Setup form submitted with landlord_username=%s, tenant_username=%s",
+                landlord_username, tenant_username,
             )
-            return render_template("setup.html")
 
-        try:
-            db.execute(
-                "INSERT INTO users (username, password, role, full_name, email) VALUES (?, ?, 'landlord', ?, ?)",
-                (landlord_username, landlord_password, landlord_full_name, landlord_email),
-            )
-            landlord_id = db.execute("SELECT last_insert_rowid() as id").fetchone()["id"]
+            if not all([
+                landlord_username, landlord_password,
+                tenant_username, tenant_password,
+                monthly_rent_raw, due_day_raw,
+            ]):
+                flash("Please fill in all required fields.", "warning")
+                return render_template("setup.html")
 
-            db.execute(
-                "INSERT INTO users (username, password, role, full_name, email) VALUES (?, ?, 'tenant', ?, ?)",
-                (tenant_username, tenant_password, tenant_full_name, tenant_email),
-            )
-            tenant_id = db.execute("SELECT last_insert_rowid() as id").fetchone()["id"]
+            try:
+                monthly_rent = float(monthly_rent_raw)
+                due_day = int(due_day_raw)
+            except ValueError:
+                logger.warning("Invalid monthly_rent or due_day entered during setup.")
+                flash("Monthly rent must be a number and due day must be an integer.", "warning")
+                return render_template("setup.html")
 
-            db.execute(
-                """
-                INSERT INTO leases (tenant_id, landlord_id, monthly_rent, due_day, start_date, is_active)
-                VALUES (?, ?, ?, ?, DATE('now'), 1)
-                """,
-                (tenant_id, landlord_id, monthly_rent, due_day),
-            )
-            db.commit()
-            logger.info(
-                "Setup completed with landlord id=%s and tenant id=%s",
-                landlord_id,
-                tenant_id,
-            )
-            flash("Setup completed. You can now log in.", "success")
-            return redirect(url_for("login"))
-        except sqlite3.IntegrityError:
-            logger.exception("IntegrityError during setup.")
-            flash("Error during setup: usernames might already exist.", "danger")
-            return render_template("setup.html")
+            try:
+                # Create landlord
+                landlord_resp = supabase.table("users").insert({
+                    "username": landlord_username,
+                    "password": landlord_password,
+                    "role": "landlord",
+                    "full_name": landlord_full_name or None,
+                    "email": landlord_email or None,
+                }).execute()
+                landlord_id = landlord_resp.data[0]["id"]
 
+                # Create tenant
+                tenant_resp = supabase.table("users").insert({
+                    "username": tenant_username,
+                    "password": tenant_password,
+                    "role": "tenant",
+                    "full_name": tenant_full_name or None,
+                    "email": tenant_email or None,
+                }).execute()
+                tenant_id = tenant_resp.data[0]["id"]
+
+                # Create lease
+                today = datetime.date.today().isoformat()
+                supabase.table("leases").insert({
+                    "tenant_id": tenant_id,
+                    "landlord_id": landlord_id,
+                    "monthly_rent": monthly_rent,
+                    "due_day": due_day,
+                    "start_date": today,
+                    "is_active": True,
+                }).execute()
+
+                logger.info("Setup completed with landlord id=%s and tenant id=%s", landlord_id, tenant_id)
+                flash("Setup completed. You can now log in.", "success")
+                return redirect(url_for("login"))
+            except Exception as e:
+                logger.exception("Error during setup: %s", e)
+                flash("Error during setup: usernames might already exist.", "danger")
+                return render_template("setup.html")
+
+    except RuntimeError as e:
+        flash(str(e), "danger")
+        return render_template("setup.html")
+    
     return render_template("setup.html")
 
 
@@ -735,7 +665,7 @@ def dashboard():
 
 def _apply_deepl_and_overdue(rows):
     """
-    Convert maintenance request rows to dicts, attach translated_description (for ES)
+    Process maintenance request rows, attach translated_description (for ES)
     and is_overdue flag based on age + status.
     """
     lang = get_lang()
@@ -743,7 +673,7 @@ def _apply_deepl_and_overdue(rows):
     processed = []
 
     for r in rows:
-        r_dict = dict(r)
+        r_dict = dict(r) if hasattr(r, "keys") else r
 
         # DeepL translation only when viewing in Spanish
         if lang == "es":
@@ -759,27 +689,24 @@ def _apply_deepl_and_overdue(rows):
         status = r_dict.get("status")
         if created_at_str and status in ("Open", "In progress"):
             try:
-                # SQLite CURRENT_TIMESTAMP is "YYYY-MM-DD HH:MM:SS"
-                created_dt = datetime.datetime.fromisoformat(
-                    created_at_str.replace(" ", "T")
-                )
-                age_days = (now - created_dt).days
-                if age_days >= 7:
-                    r_dict["is_overdue"] = True
+                # Handle ISO format from Supabase
+                if isinstance(created_at_str, str):
+                    created_at_str = created_at_str.replace("Z", "+00:00")
+                    created_dt = datetime.datetime.fromisoformat(created_at_str.replace(" ", "T"))
+                    if created_dt.tzinfo:
+                        created_dt = created_dt.replace(tzinfo=None)
+                    age_days = (now - created_dt).days
+                    if age_days >= 7:
+                        r_dict["is_overdue"] = True
             except Exception:
                 logger.exception(
                     "Failed to parse created_at for maintenance request id=%s value=%r",
-                    r_dict.get("id"),
-                    created_at_str,
+                    r_dict.get("id"), created_at_str,
                 )
 
         processed.append(r_dict)
 
-    logger.debug(
-        "Processed %d maintenance requests for DeepL/overdue (lang=%s).",
-        len(processed),
-        lang,
-    )
+    logger.debug("Processed %d maintenance requests for DeepL/overdue (lang=%s).", len(processed), lang)
     return processed
 
 
@@ -791,40 +718,50 @@ def _apply_deepl_and_overdue(rows):
 @login_required(role="tenant")
 def tenant_dashboard():
     user = get_current_user()
-    db = get_db()
     logger.debug("Loading tenant dashboard for tenant id=%s", user["id"])
 
-    # Maintenance requests
-    requests_rows = db.execute(
-        "SELECT * FROM maintenance_requests WHERE tenant_id = ? ORDER BY created_at DESC",
-        (user["id"],),
-    ).fetchall()
-    requests_for_view = _apply_deepl_and_overdue(requests_rows)
-
-    # Rent info
-    month, year, month_label = get_current_month_year()
-    lease = get_active_lease_for_tenant(user["id"])
-    rent_paid = 0
-    rent_status = None
-    recent_payments = []
-    if lease:
-        rent_paid, rent_status = get_rent_status_for_lease(
-            lease["id"], lease["monthly_rent"], month, year
+    try:
+        supabase = require_supabase()
+        
+        # Maintenance requests
+        requests_resp = (
+            supabase.table("maintenance_requests")
+            .select("*")
+            .eq("tenant_id", user["id"])
+            .order("created_at", desc=True)
+            .execute()
         )
-        recent_payments = get_recent_rent_payments_for_tenant(user["id"], limit=5)
-    else:
-        logger.warning("No active lease found for tenant id=%s", user["id"])
+        requests_rows = requests_resp.data or []
+        requests_for_view = _apply_deepl_and_overdue(requests_rows)
 
-    return render_template(
-        "tenant_dashboard.html",
-        user=user,
-        requests=requests_for_view,
-        lease=lease,
-        rent_month_label=month_label,
-        rent_paid=rent_paid,
-        rent_status=rent_status,
-        recent_payments=recent_payments,
-    )
+        # Rent info
+        month, year, month_label = get_current_month_year()
+        lease = get_active_lease_for_tenant(user["id"])
+        rent_paid = 0
+        rent_status = None
+        recent_payments = []
+        if lease:
+            rent_paid, rent_status = get_rent_status_for_lease(
+                lease["id"], lease["monthly_rent"], month, year
+            )
+            recent_payments = get_recent_rent_payments_for_tenant(user["id"], limit=5)
+        else:
+            logger.warning("No active lease found for tenant id=%s", user["id"])
+
+        return render_template(
+            "tenant_dashboard.html",
+            user=user,
+            requests=requests_for_view,
+            lease=lease,
+            rent_month_label=month_label,
+            rent_paid=rent_paid,
+            rent_status=rent_status,
+            recent_payments=recent_payments,
+        )
+    except Exception as e:
+        logger.exception("Error loading tenant dashboard: %s", e)
+        flash("Error loading dashboard. Please try again.", "danger")
+        return redirect(url_for("index"))
 
 
 @app.route("/tenant/request/new", methods=["GET", "POST"])
@@ -839,16 +776,12 @@ def new_request():
         image_filename = None
         logger.debug(
             "New maintenance request submission by tenant id=%s, title='%s', priority='%s'",
-            user["id"],
-            title,
-            priority,
+            user["id"], title, priority,
         )
 
         allowed_priorities = {"Low", "Normal", "High", "Emergency"}
         if priority not in allowed_priorities:
-            logger.warning(
-                "Invalid priority '%s' supplied, defaulting to 'Normal'.", priority
-            )
+            logger.warning("Invalid priority '%s' supplied, defaulting to 'Normal'.", priority)
             priority = "Normal"
 
         if not title or not description:
@@ -867,28 +800,30 @@ def new_request():
                 image_file.save(save_path)
                 logger.debug(
                     "Saved maintenance request image for tenant id=%s to %s",
-                    user["id"],
-                    save_path,
+                    user["id"], save_path,
                 )
 
-            db = get_db()
-            db.execute(
-                """
-                INSERT INTO maintenance_requests (
-                    tenant_id, title, description, status, priority, image_filename
-                ) VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                (user["id"], title, description, "Open", priority, image_filename),
-            )
-            db.commit()
-            logger.info(
-                "Maintenance request created for tenant id=%s with title='%s' priority='%s'",
-                user["id"],
-                title,
-                priority,
-            )
-            flash("Request submitted!", "success")
-            return redirect(url_for("tenant_dashboard"))
+            try:
+                supabase = require_supabase()
+                supabase.table("maintenance_requests").insert({
+                    "tenant_id": user["id"],
+                    "title": title,
+                    "description": description,
+                    "status": "Open",
+                    "priority": priority,
+                    "image_filename": image_filename,
+                }).execute()
+                
+                logger.info(
+                    "Maintenance request created for tenant id=%s with title='%s' priority='%s'",
+                    user["id"], title, priority,
+                )
+                flash("Request submitted!", "success")
+                return redirect(url_for("tenant_dashboard"))
+            except Exception as e:
+                logger.exception("Error creating maintenance request: %s", e)
+                flash("Error submitting request. Please try again.", "danger")
+    
     return render_template("new_request.html", user=user)
 
 
@@ -896,67 +831,55 @@ def new_request():
 @login_required(role="tenant")
 def tenant_pay_rent():
     user = get_current_user()
-    db = get_db()
     amount_raw = request.form.get("amount", "").strip()
     method = request.form.get("method", "").strip() or "Recorded in app"
     note = request.form.get("note", "").strip()
     logger.debug(
         "Tenant id=%s attempting to record rent payment amount_raw='%s', method='%s'",
-        user["id"],
-        amount_raw,
-        method,
+        user["id"], amount_raw, method,
     )
 
     try:
         amount = float(amount_raw)
     except ValueError:
-        logger.warning(
-            "Invalid payment amount entered by tenant id=%s: '%s'",
-            user["id"],
-            amount_raw,
-        )
+        logger.warning("Invalid payment amount entered by tenant id=%s: '%s'", user["id"], amount_raw)
         flash("Please enter a valid numeric amount.", "warning")
         return redirect(url_for("tenant_dashboard"))
 
     if amount <= 0:
-        logger.warning(
-            "Non-positive payment amount entered by tenant id=%s: %s",
-            user["id"],
-            amount,
-        )
+        logger.warning("Non-positive payment amount entered by tenant id=%s: %s", user["id"], amount)
         flash("Payment amount must be greater than zero.", "warning")
         return redirect(url_for("tenant_dashboard"))
 
     lease = get_active_lease_for_tenant(user["id"])
     if not lease:
-        logger.warning(
-            "Tenant id=%s tried to pay rent but has no active lease.", user["id"]
-        )
+        logger.warning("Tenant id=%s tried to pay rent but has no active lease.", user["id"])
         flash("No active lease found. Please contact your landlord.", "danger")
         return redirect(url_for("tenant_dashboard"))
 
     month, year, _ = get_current_month_year()
 
-    db.execute(
-        """
-        INSERT INTO rent_payments (lease_id, amount, month, year, status, method, note)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        """,
-        (lease["id"], amount, month, year, "Paid", method, note),
-    )
-    db.commit()
-    logger.info(
-        "Recorded rent payment for tenant id=%s, lease_id=%s, amount=%.2f, month=%s, year=%s",
-        user["id"],
-        lease["id"],
-        amount,
-        month,
-        year,
-    )
-    flash(
-        "Rent payment recorded for this month (this does not actually charge a card).",
-        "success",
-    )
+    try:
+        supabase = require_supabase()
+        supabase.table("rent_payments").insert({
+            "lease_id": lease["id"],
+            "amount": amount,
+            "month": month,
+            "year": year,
+            "status": "Paid",
+            "method": method,
+            "note": note or None,
+        }).execute()
+        
+        logger.info(
+            "Recorded rent payment for tenant id=%s, lease_id=%s, amount=%.2f, month=%s, year=%s",
+            user["id"], lease["id"], amount, month, year,
+        )
+        flash("Rent payment recorded for this month (this does not actually charge a card).", "success")
+    except Exception as e:
+        logger.exception("Error recording rent payment: %s", e)
+        flash("Error recording payment. Please try again.", "danger")
+    
     return redirect(url_for("tenant_dashboard"))
 
 
@@ -979,10 +902,7 @@ def tenant_stripe_checkout():
             "Stripe keys not configured when tenant id=%s attempted Stripe payment",
             user["id"],
         )
-        flash(
-            "Online payments are not configured. Please contact your landlord.",
-            "danger",
-        )
+        flash("Online payments are not configured. Please contact your landlord.", "danger")
         return redirect(url_for("tenant_dashboard"))
 
     lease = get_active_lease_for_tenant(user["id"])
@@ -1001,14 +921,8 @@ def tenant_stripe_checkout():
     logger.debug(
         "Stripe checkout calculation for tenant id=%s lease_id=%s month=%s year=%s: "
         "monthly_rent=%.2f rent_paid=%.2f amount_due=%.2f status=%s",
-        user["id"],
-        lease["id"],
-        month,
-        year,
-        lease["monthly_rent"] or 0,
-        rent_paid or 0,
-        amount_due,
-        rent_status,
+        user["id"], lease["id"], month, year,
+        lease["monthly_rent"] or 0, rent_paid or 0, amount_due, rent_status,
     )
 
     if amount_due <= 0:
@@ -1018,12 +932,8 @@ def tenant_stripe_checkout():
     try:
         amount_cents = int(round(amount_due * 100))
         logger.debug(
-            "Creating Stripe Checkout Session for tenant id=%s lease_id=%s amount_due=%.2f "
-            "(amount_cents=%s)",
-            user["id"],
-            lease["id"],
-            amount_due,
-            amount_cents,
+            "Creating Stripe Checkout Session for tenant id=%s lease_id=%s amount_due=%.2f (amount_cents=%s)",
+            user["id"], lease["id"], amount_due, amount_cents,
         )
 
         checkout_session = stripe.checkout.Session.create(
@@ -1053,17 +963,12 @@ def tenant_stripe_checkout():
 
         logger.info(
             "Created Stripe Checkout Session id=%s for tenant id=%s lease_id=%s amount_cents=%s",
-            checkout_session.id,
-            user["id"],
-            lease["id"],
-            amount_cents,
+            checkout_session.id, user["id"], lease["id"], amount_cents,
         )
         return redirect(checkout_session.url, code=303)
 
     except Exception:
-        logger.exception(
-            "Failed to create Stripe Checkout Session for tenant id=%s", user["id"]
-        )
+        logger.exception("Failed to create Stripe Checkout Session for tenant id=%s", user["id"])
         flash("Could not start payment. Please try again later.", "danger")
         return redirect(url_for("tenant_dashboard"))
 
@@ -1137,11 +1042,7 @@ def stripe_webhook():
 
         logger.info(
             "checkout.session.completed for tenant_id=%s lease_id=%s month=%s year=%s amount_total=%s",
-            tenant_id,
-            lease_id,
-            month,
-            year,
-            amount_total,
+            tenant_id, lease_id, month, year, amount_total,
         )
 
         try:
@@ -1151,34 +1052,24 @@ def stripe_webhook():
                     metadata,
                 )
             else:
-                db = get_db()
+                supabase = require_supabase()
                 amount = float(amount_total) / 100.0
                 month_int = int(month)
                 year_int = int(year)
 
-                db.execute(
-                    """
-                    INSERT INTO rent_payments (lease_id, amount, month, year, status, method, note)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        int(lease_id),
-                        amount,
-                        month_int,
-                        year_int,
-                        "Paid",
-                        "Stripe",
-                        f"Stripe Checkout session {session_obj.get('id')}",
-                    ),
-                )
-                db.commit()
+                supabase.table("rent_payments").insert({
+                    "lease_id": int(lease_id),
+                    "amount": amount,
+                    "month": month_int,
+                    "year": year_int,
+                    "status": "Paid",
+                    "method": "Stripe",
+                    "note": f"Stripe Checkout session {session_obj.get('id')}",
+                }).execute()
+                
                 logger.info(
-                    "Rent payment recorded from Stripe webhook: lease_id=%s amount=%.2f "
-                    "month=%s year=%s",
-                    lease_id,
-                    amount,
-                    month_int,
-                    year_int,
+                    "Rent payment recorded from Stripe webhook: lease_id=%s amount=%.2f month=%s year=%s",
+                    lease_id, amount, month_int, year_int,
                 )
         except Exception:
             logger.exception("Failed to record rent payment from Stripe webhook.")
@@ -1196,225 +1087,268 @@ def stripe_webhook():
 @login_required(role="landlord")
 def landlord_dashboard():
     user = get_current_user()
-    db = get_db()
     logger.debug("Loading landlord dashboard for landlord id=%s", user["id"])
 
-    # Maintenance overview scoped to this landlord's tenants
-    requests_rows = db.execute(
-        """
-        SELECT mr.*, u.full_name as tenant_name, u.username as tenant_username
-        FROM maintenance_requests mr
-        JOIN users u ON u.id = mr.tenant_id
-        LEFT JOIN leases l ON l.tenant_id = u.id AND l.is_active = 1
-        WHERE l.landlord_id = ?
-        ORDER BY mr.created_at DESC
-        """,
-        (user["id"],),
-    ).fetchall()
-    requests_for_view = _apply_deepl_and_overdue(requests_rows)
+    try:
+        supabase = require_supabase()
+        
+        # Get all tenant IDs for this landlord's active leases
+        leases_resp = (
+            supabase.table("leases")
+            .select("tenant_id")
+            .eq("landlord_id", user["id"])
+            .eq("is_active", True)
+            .execute()
+        )
+        tenant_ids = [l["tenant_id"] for l in (leases_resp.data or [])]
+        
+        # Maintenance requests for landlord's tenants
+        requests_for_view = []
+        open_count = 0
+        
+        if tenant_ids:
+            requests_resp = (
+                supabase.table("maintenance_requests")
+                .select("*")
+                .in_("tenant_id", tenant_ids)
+                .order("created_at", desc=True)
+                .execute()
+            )
+            requests_rows = requests_resp.data or []
+            
+            # Add tenant names
+            users_resp = supabase.table("users").select("id, full_name, username").in_("id", tenant_ids).execute()
+            user_map = {u["id"]: u for u in (users_resp.data or [])}
+            
+            for r in requests_rows:
+                tenant = user_map.get(r["tenant_id"], {})
+                r["tenant_name"] = tenant.get("full_name")
+                r["tenant_username"] = tenant.get("username")
+            
+            requests_for_view = _apply_deepl_and_overdue(requests_rows)
+            open_count = sum(1 for r in requests_rows if r.get("status") == "Open")
 
-    open_count = db.execute(
-        """
-        SELECT COUNT(*) as c
-        FROM maintenance_requests mr
-        JOIN users u ON u.id = mr.tenant_id
-        LEFT JOIN leases l ON l.tenant_id = u.id AND l.is_active = 1
-        WHERE mr.status = 'Open'
-          AND l.landlord_id = ?
-        """,
-        (user["id"],),
-    ).fetchone()["c"]
+        # Rent overview for current month
+        month, year, month_label = get_current_month_year()
+        logger.debug("Calculating rent overview for landlord id=%s month=%s year=%s", user["id"], month, year)
 
-    # Rent overview for current month
-    month, year, month_label = get_current_month_year()
-    logger.debug(
-        "Calculating rent overview for landlord id=%s month=%s year=%s",
-        user["id"],
-        month,
-        year,
-    )
+        rent_overview = []
+        unpaid_count = 0
+        
+        # Get all active leases with tenant info
+        leases_full_resp = (
+            supabase.table("leases")
+            .select("id, tenant_id, monthly_rent, due_day")
+            .eq("landlord_id", user["id"])
+            .eq("is_active", True)
+            .execute()
+        )
+        leases_full = leases_full_resp.data or []
+        
+        if leases_full:
+            lease_ids = [l["id"] for l in leases_full]
+            tenant_ids_full = list(set(l["tenant_id"] for l in leases_full))
+            
+            # Get tenant names
+            tenants_resp = supabase.table("users").select("id, full_name, username").in_("id", tenant_ids_full).execute()
+            tenant_map = {t["id"]: t for t in (tenants_resp.data or [])}
+            
+            # Get payments for this month
+            payments_resp = (
+                supabase.table("rent_payments")
+                .select("lease_id, amount, status")
+                .in_("lease_id", lease_ids)
+                .eq("month", month)
+                .eq("year", year)
+                .execute()
+            )
+            payments = payments_resp.data or []
+            
+            # Sum payments by lease
+            paid_by_lease = {}
+            for p in payments:
+                if p.get("status") == "Paid":
+                    paid_by_lease[p["lease_id"]] = paid_by_lease.get(p["lease_id"], 0) + p["amount"]
+            
+            for lease in leases_full:
+                tenant = tenant_map.get(lease["tenant_id"], {})
+                monthly_rent = lease["monthly_rent"]
+                paid_amount = paid_by_lease.get(lease["id"], 0)
+                
+                if paid_amount >= monthly_rent:
+                    status = "Paid"
+                elif paid_amount > 0:
+                    status = "Partial"
+                else:
+                    status = "Unpaid"
+                
+                if status != "Paid":
+                    unpaid_count += 1
+                
+                rent_overview.append({
+                    "tenant_name": tenant.get("full_name") or tenant.get("username"),
+                    "monthly_rent": monthly_rent,
+                    "due_day": lease["due_day"],
+                    "paid_amount": paid_amount,
+                    "status": status,
+                })
 
-    rent_rows = db.execute(
-        """
-        SELECT l.id as lease_id,
-               t.full_name as tenant_name,
-               t.username as tenant_username,
-               l.monthly_rent,
-               l.due_day,
-               COALESCE(SUM(CASE WHEN rp.status = 'Paid' THEN rp.amount ELSE 0 END), 0) as paid_amount
-        FROM leases l
-        JOIN users t ON t.id = l.tenant_id
-        LEFT JOIN rent_payments rp
-          ON rp.lease_id = l.id AND rp.month = ? AND rp.year = ?
-        WHERE l.landlord_id = ? AND l.is_active = 1
-        GROUP BY l.id, t.full_name, t.username, l.monthly_rent, l.due_day
-        ORDER BY t.full_name, t.username
-        """,
-        (month, year, user["id"]),
-    ).fetchall()
-
-    rent_overview = []
-    unpaid_count = 0
-    for row in rent_rows:
-        monthly_rent = row["monthly_rent"]
-        paid_amount = row["paid_amount"]
-        if paid_amount >= monthly_rent:
-            status = "Paid"
-        elif paid_amount > 0:
-            status = "Partial"
-        else:
-            status = "Unpaid"
-        if status != "Paid":
-            unpaid_count += 1
-        rent_overview.append(
-            {
-                "tenant_name": row["tenant_name"] or row["tenant_username"],
-                "monthly_rent": monthly_rent,
-                "due_day": row["due_day"],
-                "paid_amount": paid_amount,
-                "status": status,
-            }
+        rent_last_updated = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+        logger.debug(
+            "Rent overview for landlord id=%s: %d leases, %d unpaid/partial (generated %s)",
+            user["id"], len(rent_overview), unpaid_count, rent_last_updated,
         )
 
-    rent_last_updated = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
-    logger.debug(
-        "Rent overview for landlord id=%s: %d leases, %d unpaid/partial (generated %s)",
-        user["id"],
-        len(rent_overview),
-        unpaid_count,
-        rent_last_updated,
-    )
-
-    return render_template(
-        "landlord_dashboard.html",
-        user=user,
-        requests=requests_for_view,
-        open_count=open_count,
-        rent_month_label=month_label,
-        rent_overview=rent_overview,
-        unpaid_count=unpaid_count,
-        rent_last_updated=rent_last_updated,
-    )
+        return render_template(
+            "landlord_dashboard.html",
+            user=user,
+            requests=requests_for_view,
+            open_count=open_count,
+            rent_month_label=month_label,
+            rent_overview=rent_overview,
+            unpaid_count=unpaid_count,
+            rent_last_updated=rent_last_updated,
+        )
+    except Exception as e:
+        logger.exception("Error loading landlord dashboard: %s", e)
+        flash("Error loading dashboard. Please try again.", "danger")
+        return redirect(url_for("index"))
 
 
 @app.route("/landlord/leases")
 @login_required(role="landlord")
 def landlord_leases():
     user = get_current_user()
-    db = get_db()
     logger.debug("Landlord leases view for landlord id=%s", user["id"])
 
-    leases = db.execute(
-        """
-        SELECT l.*, t.full_name as tenant_name, t.username as tenant_username
-        FROM leases l
-        JOIN users t ON t.id = l.tenant_id
-        WHERE l.landlord_id = ?
-        ORDER BY l.is_active DESC, t.full_name, t.username
-        """,
-        (user["id"],),
-    ).fetchall()
+    try:
+        supabase = require_supabase()
+        
+        # Get leases
+        leases_resp = (
+            supabase.table("leases")
+            .select("*")
+            .eq("landlord_id", user["id"])
+            .order("is_active", desc=True)
+            .execute()
+        )
+        leases = leases_resp.data or []
+        
+        # Get tenant names
+        if leases:
+            tenant_ids = list(set(l["tenant_id"] for l in leases))
+            tenants_resp = supabase.table("users").select("id, full_name, username").in_("id", tenant_ids).execute()
+            tenant_map = {t["id"]: t for t in (tenants_resp.data or [])}
+            
+            for lease in leases:
+                tenant = tenant_map.get(lease["tenant_id"], {})
+                lease["tenant_name"] = tenant.get("full_name")
+                lease["tenant_username"] = tenant.get("username")
 
-    return render_template("landlord_leases.html", user=user, leases=leases)
+        return render_template("landlord_leases.html", user=user, leases=leases)
+    except Exception as e:
+        logger.exception("Error loading leases: %s", e)
+        flash("Error loading leases. Please try again.", "danger")
+        return redirect(url_for("landlord_dashboard"))
 
 
 @app.route("/landlord/leases/new", methods=["GET", "POST"])
 @login_required(role="landlord")
 def landlord_new_lease():
     user = get_current_user()
-    db = get_db()
-    logger.debug(
-        "New lease route accessed by landlord id=%s method=%s",
-        user["id"],
-        request.method,
-    )
+    logger.debug("New lease route accessed by landlord id=%s method=%s", user["id"], request.method)
 
-    tenants = db.execute(
-        "SELECT * FROM users WHERE role = 'tenant' ORDER BY full_name, username"
-    ).fetchall()
-
-    if request.method == "POST":
-        tenant_id_raw = request.form.get("tenant_id")
-        monthly_rent_raw = request.form.get("monthly_rent")
-        due_day_raw = request.form.get("due_day")
-        start_date = request.form.get("start_date") or None
-        end_date = request.form.get("end_date") or None
-
-        logger.debug(
-            "New lease submission: tenant_id_raw=%s, monthly_rent_raw=%s, due_day_raw=%s, "
-            "start_date=%s, end_date=%s",
-            tenant_id_raw,
-            monthly_rent_raw,
-            due_day_raw,
-            start_date,
-            end_date,
+    try:
+        supabase = require_supabase()
+        
+        # Get all tenants
+        tenants_resp = (
+            supabase.table("users")
+            .select("*")
+            .eq("role", "tenant")
+            .order("full_name")
+            .execute()
         )
+        tenants = tenants_resp.data or []
 
-        try:
-            tenant_id = int(tenant_id_raw)
-            monthly_rent = float(monthly_rent_raw)
-            due_day = int(due_day_raw)
-        except (TypeError, ValueError):
-            logger.warning("Invalid lease form input.")
-            flash(
-                "Please provide valid values for tenant, monthly rent, and due day.",
-                "warning",
-            )
-            return render_template(
-                "landlord_lease_form.html", user=user, tenants=tenants
+        if request.method == "POST":
+            tenant_id_raw = request.form.get("tenant_id")
+            monthly_rent_raw = request.form.get("monthly_rent")
+            due_day_raw = request.form.get("due_day")
+            start_date = request.form.get("start_date") or None
+            end_date = request.form.get("end_date") or None
+
+            logger.debug(
+                "New lease submission: tenant_id_raw=%s, monthly_rent_raw=%s, due_day_raw=%s",
+                tenant_id_raw, monthly_rent_raw, due_day_raw,
             )
 
-        db.execute(
-            """
-            INSERT INTO leases (tenant_id, landlord_id, monthly_rent, due_day, start_date, end_date, is_active)
-            VALUES (?, ?, ?, ?, ?, ?, 1)
-            """,
-            (tenant_id, user["id"], monthly_rent, due_day, start_date, end_date),
-        )
-        db.commit()
-        logger.info(
-            "New lease created by landlord id=%s for tenant_id=%s",
-            user["id"],
-            tenant_id,
-        )
-        flash("Lease created.", "success")
+            try:
+                tenant_id = int(tenant_id_raw)
+                monthly_rent = float(monthly_rent_raw)
+                due_day = int(due_day_raw)
+            except (TypeError, ValueError):
+                logger.warning("Invalid lease form input.")
+                flash("Please provide valid values for tenant, monthly rent, and due day.", "warning")
+                return render_template("landlord_lease_form.html", user=user, tenants=tenants)
+
+            supabase.table("leases").insert({
+                "tenant_id": tenant_id,
+                "landlord_id": user["id"],
+                "monthly_rent": monthly_rent,
+                "due_day": due_day,
+                "start_date": start_date,
+                "end_date": end_date,
+                "is_active": True,
+            }).execute()
+            
+            logger.info("New lease created by landlord id=%s for tenant_id=%s", user["id"], tenant_id)
+            flash("Lease created.", "success")
+            return redirect(url_for("landlord_leases"))
+
+        return render_template("landlord_lease_form.html", user=user, tenants=tenants)
+    except Exception as e:
+        logger.exception("Error in new lease: %s", e)
+        flash("Error creating lease. Please try again.", "danger")
         return redirect(url_for("landlord_leases"))
-
-    return render_template("landlord_lease_form.html", user=user, tenants=tenants)
 
 
 @app.route("/landlord/leases/<int:lease_id>/toggle", methods=["POST"])
 @login_required(role="landlord")
 def landlord_toggle_lease(lease_id):
     user = get_current_user()
-    db = get_db()
-    logger.debug(
-        "Toggle lease id=%s requested by landlord id=%s", lease_id, user["id"]
-    )
+    logger.debug("Toggle lease id=%s requested by landlord id=%s", lease_id, user["id"])
 
-    lease = db.execute(
-        "SELECT * FROM leases WHERE id = ? AND landlord_id = ?",
-        (lease_id, user["id"]),
-    ).fetchone()
-    if not lease:
-        logger.warning(
-            "Lease id=%s not found or not owned by landlord id=%s",
-            lease_id,
-            user["id"],
+    try:
+        supabase = require_supabase()
+        
+        # Get the lease
+        lease_resp = (
+            supabase.table("leases")
+            .select("*")
+            .eq("id", lease_id)
+            .eq("landlord_id", user["id"])
+            .limit(1)
+            .execute()
         )
-        flash("Lease not found.", "danger")
-        return redirect(url_for("landlord_leases"))
+        leases = lease_resp.data or []
+        
+        if not leases:
+            logger.warning("Lease id=%s not found or not owned by landlord id=%s", lease_id, user["id"])
+            flash("Lease not found.", "danger")
+            return redirect(url_for("landlord_leases"))
 
-    new_status = 0 if lease["is_active"] else 1
-    db.execute("UPDATE leases SET is_active = ? WHERE id = ?", (new_status, lease_id))
-    db.commit()
-    logger.info(
-        "Lease id=%s toggled by landlord id=%s to is_active=%s",
-        lease_id,
-        user["id"],
-        new_status,
-    )
-    flash("Lease status updated.", "success")
+        lease = leases[0]
+        new_status = not lease["is_active"]
+        
+        supabase.table("leases").update({"is_active": new_status}).eq("id", lease_id).execute()
+        
+        logger.info("Lease id=%s toggled by landlord id=%s to is_active=%s", lease_id, user["id"], new_status)
+        flash("Lease status updated.", "success")
+    except Exception as e:
+        logger.exception("Error toggling lease: %s", e)
+        flash("Error updating lease. Please try again.", "danger")
+    
     return redirect(url_for("landlord_leases"))
 
 
@@ -1422,25 +1356,30 @@ def landlord_toggle_lease(lease_id):
 @login_required(role="landlord")
 def landlord_tenants():
     user = get_current_user()
-    db = get_db()
     logger.debug("Landlord tenants view for landlord id=%s", user["id"])
 
-    tenants = db.execute(
-        "SELECT * FROM users WHERE role = 'tenant' ORDER BY full_name, username"
-    ).fetchall()
-    return render_template("landlord_tenants.html", user=user, tenants=tenants)
+    try:
+        supabase = require_supabase()
+        tenants_resp = (
+            supabase.table("users")
+            .select("*")
+            .eq("role", "tenant")
+            .order("full_name")
+            .execute()
+        )
+        tenants = tenants_resp.data or []
+        return render_template("landlord_tenants.html", user=user, tenants=tenants)
+    except Exception as e:
+        logger.exception("Error loading tenants: %s", e)
+        flash("Error loading tenants. Please try again.", "danger")
+        return redirect(url_for("landlord_dashboard"))
 
 
 @app.route("/landlord/tenants/new", methods=["GET", "POST"])
 @login_required(role="landlord")
 def landlord_new_tenant():
     user = get_current_user()
-    db = get_db()
-    logger.debug(
-        "New tenant route accessed by landlord id=%s method=%s",
-        user["id"],
-        request.method,
-    )
+    logger.debug("New tenant route accessed by landlord id=%s method=%s", user["id"], request.method)
 
     if request.method == "POST":
         username = request.form.get("username", "").strip()
@@ -1448,33 +1387,27 @@ def landlord_new_tenant():
         full_name = request.form.get("full_name", "").strip()
         email = request.form.get("email", "").strip()
 
-        logger.debug(
-            "New tenant submission: username=%s, full_name=%s, email=%s",
-            username,
-            full_name,
-            email,
-        )
+        logger.debug("New tenant submission: username=%s, full_name=%s, email=%s", username, full_name, email)
 
         if not username or not password:
             flash("Username and password are required.", "warning")
             return render_template("landlord_tenant_form.html", user=user)
 
         try:
-            db.execute(
-                "INSERT INTO users (username, password, role, full_name, email) "
-                "VALUES (?, ?, 'tenant', ?, ?)",
-                (username, password, full_name, email),
-            )
-            db.commit()
-            logger.info(
-                "New tenant %s created by landlord id=%s", username, user["id"]
-            )
+            supabase = require_supabase()
+            supabase.table("users").insert({
+                "username": username,
+                "password": password,
+                "role": "tenant",
+                "full_name": full_name or None,
+                "email": email or None,
+            }).execute()
+            
+            logger.info("New tenant %s created by landlord id=%s", username, user["id"])
             flash("Tenant created.", "success")
             return redirect(url_for("landlord_tenants"))
-        except sqlite3.IntegrityError:
-            logger.exception(
-                "IntegrityError creating new tenant username=%s", username
-            )
+        except Exception as e:
+            logger.exception("Error creating tenant: %s", e)
             flash("A tenant with that username already exists.", "danger")
 
     return render_template("landlord_tenant_form.html", user=user)
@@ -1484,58 +1417,80 @@ def landlord_new_tenant():
 @login_required(role="landlord")
 def landlord_requests():
     user = get_current_user()
-    db = get_db()
     logger.debug("Landlord requests view for landlord id=%s", user["id"])
 
-    requests_rows = db.execute(
-        """
-        SELECT mr.*, u.full_name as tenant_name, u.username as tenant_username
-        FROM maintenance_requests mr
-        JOIN users u ON u.id = mr.tenant_id
-        LEFT JOIN leases l ON l.tenant_id = u.id AND l.is_active = 1
-        WHERE l.landlord_id = ?
-        ORDER BY mr.created_at DESC
-        """,
-        (user["id"],),
-    ).fetchall()
+    try:
+        supabase = require_supabase()
+        
+        # Get tenant IDs for this landlord
+        leases_resp = (
+            supabase.table("leases")
+            .select("tenant_id")
+            .eq("landlord_id", user["id"])
+            .eq("is_active", True)
+            .execute()
+        )
+        tenant_ids = list(set(l["tenant_id"] for l in (leases_resp.data or [])))
+        
+        requests_for_view = []
+        
+        if tenant_ids:
+            # Get maintenance requests
+            requests_resp = (
+                supabase.table("maintenance_requests")
+                .select("*")
+                .in_("tenant_id", tenant_ids)
+                .order("created_at", desc=True)
+                .execute()
+            )
+            requests_rows = requests_resp.data or []
+            
+            # Get tenant names
+            tenants_resp = supabase.table("users").select("id, full_name, username").in_("id", tenant_ids).execute()
+            tenant_map = {t["id"]: t for t in (tenants_resp.data or [])}
+            
+            for r in requests_rows:
+                tenant = tenant_map.get(r["tenant_id"], {})
+                r["tenant_name"] = tenant.get("full_name")
+                r["tenant_username"] = tenant.get("username")
+            
+            requests_for_view = _apply_deepl_and_overdue(requests_rows)
 
-    requests_for_view = _apply_deepl_and_overdue(requests_rows)
-
-    return render_template("landlord_requests.html", user=user, requests=requests_for_view)
+        return render_template("landlord_requests.html", user=user, requests=requests_for_view)
+    except Exception as e:
+        logger.exception("Error loading requests: %s", e)
+        flash("Error loading requests. Please try again.", "danger")
+        return redirect(url_for("landlord_dashboard"))
 
 
 @app.route("/landlord/requests/<int:request_id>/status", methods=["POST"])
 @login_required(role="landlord")
 def landlord_update_request_status(request_id):
     user = get_current_user()
-    db = get_db()
     new_status = request.form.get("status", "").strip()
     logger.debug(
         "Landlord id=%s updating maintenance request id=%s to status=%s",
-        user["id"],
-        request_id,
-        new_status,
+        user["id"], request_id, new_status,
     )
 
     if new_status not in ["Open", "In progress", "Completed"]:
-        logger.warning(
-            "Invalid status %s provided for request id=%s", new_status, request_id
-        )
+        logger.warning("Invalid status %s provided for request id=%s", new_status, request_id)
         flash("Invalid status.", "warning")
         return redirect(url_for("landlord_requests"))
 
-    db.execute(
-        "UPDATE maintenance_requests SET status = ? WHERE id = ?",
-        (new_status, request_id),
-    )
-    db.commit()
-    logger.info(
-        "Maintenance request id=%s updated to status=%s by landlord id=%s",
-        request_id,
-        new_status,
-        user["id"],
-    )
-    flash("Request status updated.", "success")
+    try:
+        supabase = require_supabase()
+        supabase.table("maintenance_requests").update({"status": new_status}).eq("id", request_id).execute()
+        
+        logger.info(
+            "Maintenance request id=%s updated to status=%s by landlord id=%s",
+            request_id, new_status, user["id"],
+        )
+        flash("Request status updated.", "success")
+    except Exception as e:
+        logger.exception("Error updating request status: %s", e)
+        flash("Error updating status. Please try again.", "danger")
+    
     return redirect(url_for("landlord_requests"))
 
 
