@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
   <section class="card">
-    <h1>📢 Announcements</h1>
-    <p class="subtitle">Post notices for your tenants</p>
+    <h1>📢 {{ t('announcements_title') }}</h1>
+    <p class="subtitle">{{ t('announcements_subtitle') }}</p>
     <p>
-      <a class="button primary" href="{{ url_for('landlord_new_announcement') }}">+ New Announcement</a>
-      <a class="button" href="{{ url_for('landlord_dashboard') }}">← Back to Dashboard</a>
+      <a class="button primary" href="{{ url_for('landlord_new_announcement') }}">{{ t('announcements_new') }}</a>
+      <a class="button" href="{{ url_for('landlord_dashboard') }}">{{ t('back_to_dashboard') }}</a>
     </p>
   </section>
 
@@ -14,12 +14,12 @@
       <table class="table">
         <thead>
           <tr>
-            <th>Title</th>
-            <th>Content</th>
-            <th>Posted</th>
-            <th>Expires</th>
-            <th>Status</th>
-            <th>Actions</th>
+            <th>{{ t('col_title') }}</th>
+            <th>{{ t('announcements_content') }}</th>
+            <th>{{ t('announcements_posted') }}</th>
+            <th>{{ t('announcements_expires') }}</th>
+            <th>{{ t('col_status') }}</th>
+            <th>{{ t('actions') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -28,22 +28,22 @@
               <td><strong>{{ a.title }}</strong></td>
               <td>{{ a.content[:100] }}{% if a.content|length > 100 %}...{% endif %}</td>
               <td>{{ a.created_at[:10] if a.created_at else 'N/A' }}</td>
-              <td>{{ a.expires_at[:10] if a.expires_at else 'Never' }}</td>
+              <td>{{ a.expires_at[:10] if a.expires_at else t('announcements_never') }}</td>
               <td>
                 {% if a.is_active %}
-                  <span class="status-badge status-paid">Active</span>
+                  <span class="status-badge status-paid">{{ t('announcements_active') }}</span>
                 {% else %}
-                  <span class="status-badge status-unpaid">Inactive</span>
+                  <span class="status-badge status-unpaid">{{ t('announcements_inactive') }}</span>
                 {% endif %}
               </td>
               <td>
                 <form method="post" action="{{ url_for('landlord_toggle_announcement', announcement_id=a.id) }}" style="display:inline;">
                   <button class="button small" type="submit">
-                    {% if a.is_active %}Deactivate{% else %}Activate{% endif %}
+                    {% if a.is_active %}{{ t('announcements_deactivate') }}{% else %}{{ t('announcements_activate') }}{% endif %}
                   </button>
                 </form>
-                <form method="post" action="{{ url_for('landlord_delete_announcement', announcement_id=a.id) }}" style="display:inline;" onsubmit="return confirm('Delete this announcement?');">
-                  <button class="button small danger" type="submit">Delete</button>
+                <form method="post" action="{{ url_for('landlord_delete_announcement', announcement_id=a.id) }}" style="display:inline;" onsubmit="return confirm('{{ t('announcements_delete_confirm') }}');">
+                  <button class="button small danger" type="submit">{{ t('announcements_delete') }}</button>
                 </form>
               </td>
             </tr>
@@ -51,8 +51,7 @@
         </tbody>
       </table>
     {% else %}
-      <p>No announcements yet. Create one to notify your tenants!</p>
+      <p>{{ t('announcements_none') }}</p>
     {% endif %}
   </section>
 {% endblock %}
-

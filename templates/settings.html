@@ -1,57 +1,56 @@
 {% extends "base.html" %}
 {% block content %}
   <section class="card">
-    <h1>Settings</h1>
-    <p class="subtitle">Manage your account</p>
+    <h1>{{ t('settings_title') }}</h1>
+    <p class="subtitle">{{ t('settings_subtitle') }}</p>
   </section>
 
   <section class="card">
-    <h2>Profile Information</h2>
+    <h2>{{ t('settings_profile') }}</h2>
     <form method="post" action="{{ url_for('update_profile') }}" class="form">
       <label>
-        Username
+        {{ t('settings_username') }}
         <input type="text" value="{{ user.username }}" disabled>
-        <small class="form-hint">Username cannot be changed</small>
+        <small class="form-hint">{{ t('settings_username_hint') }}</small>
       </label>
       <label>
-        Full Name
-        <input type="text" name="full_name" value="{{ user.full_name or '' }}" placeholder="Enter your full name">
+        {{ t('settings_full_name') }}
+        <input type="text" name="full_name" value="{{ user.full_name or '' }}">
       </label>
       <label>
-        Email
-        <input type="email" name="email" value="{{ user.email or '' }}" placeholder="Enter your email">
+        {{ t('settings_email') }}
+        <input type="email" name="email" value="{{ user.email or '' }}">
       </label>
       <label>
-        Role
-        <input type="text" value="{{ user.role|capitalize }}" disabled>
+        {{ t('settings_role') }}
+        <input type="text" value="{% if user.role == 'tenant' %}{{ t('role_tenant') }}{% else %}{{ t('role_landlord') }}{% endif %}" disabled>
       </label>
-      <button class="button primary" type="submit">Update Profile</button>
+      <button class="button primary" type="submit">{{ t('settings_update_profile') }}</button>
     </form>
   </section>
 
   <section class="card">
-    <h2>Change Password</h2>
+    <h2>{{ t('settings_password') }}</h2>
     <form method="post" action="{{ url_for('change_password') }}" class="form">
       <label>
-        Current Password
-        <input type="password" name="current_password" required placeholder="Enter your current password">
+        {{ t('settings_current_password') }}
+        <input type="password" name="current_password" required>
       </label>
       <label>
-        New Password
-        <input type="password" name="new_password" required placeholder="Enter new password (min 6 characters)">
+        {{ t('settings_new_password') }}
+        <input type="password" name="new_password" required>
       </label>
       <label>
-        Confirm New Password
-        <input type="password" name="confirm_password" required placeholder="Confirm new password">
+        {{ t('settings_confirm_password') }}
+        <input type="password" name="confirm_password" required>
       </label>
-      <button class="button primary" type="submit">Change Password</button>
+      <button class="button primary" type="submit">{{ t('settings_change_password') }}</button>
     </form>
   </section>
 
   <section class="card">
     <p>
-      <a class="button" href="{{ url_for('dashboard') }}">← Back to Dashboard</a>
+      <a class="button" href="{{ url_for('dashboard') }}">{{ t('back_to_dashboard') }}</a>
     </p>
   </section>
 {% endblock %}
-

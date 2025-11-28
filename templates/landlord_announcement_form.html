@@ -1,28 +1,27 @@
 {% extends "base.html" %}
 {% block content %}
   <section class="card">
-    <h1>📢 New Announcement</h1>
-    <p class="subtitle">Post a notice to all your tenants</p>
+    <h1>📢 {{ t('announcements_new_title') }}</h1>
+    <p class="subtitle">{{ t('announcements_new_subtitle') }}</p>
   </section>
 
   <section class="card">
     <form method="post" action="{{ url_for('landlord_new_announcement') }}" class="form">
       <label>
-        Title
-        <input type="text" name="title" required placeholder="e.g., Water Shutoff Notice">
+        {{ t('col_title') }}
+        <input type="text" name="title" required>
       </label>
       <label>
-        Content
-        <textarea name="content" rows="5" required placeholder="Enter the announcement details..."></textarea>
+        {{ t('announcements_content') }}
+        <textarea name="content" rows="5" required></textarea>
       </label>
       <label>
-        Expires (optional)
+        {{ t('announcements_expires_optional') }}
         <input type="date" name="expires_at">
-        <small class="form-hint">Leave empty for no expiration</small>
+        <small class="form-hint">{{ t('announcements_expires_hint') }}</small>
       </label>
-      <button class="button primary" type="submit">Post Announcement</button>
-      <a class="button" href="{{ url_for('landlord_announcements') }}">Cancel</a>
+      <button class="button primary" type="submit">{{ t('announcements_post') }}</button>
+      <a class="button" href="{{ url_for('landlord_announcements') }}">{{ t('cancel') }}</a>
     </form>
   </section>
 {% endblock %}
-

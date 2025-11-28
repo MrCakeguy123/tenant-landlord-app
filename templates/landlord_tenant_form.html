@@ -1,29 +1,29 @@
 {% extends "base.html" %}
 {% block content %}
   <section class="card">
-    <h1>New tenant</h1>
+    <h1>{{ t('tenants_new') }}</h1>
     <p>
-      <a class="button" href="{{ url_for('landlord_tenants') }}">Back to tenants</a>
+      <a class="button" href="{{ url_for('landlord_tenants') }}">{{ t('tenants_back') }}</a>
     </p>
 
     <form method="post" action="{{ url_for('landlord_new_tenant') }}" class="form">
       <label>
-        Username
+        {{ t('username') }}
         <input type="text" name="username" required>
       </label>
       <label>
-        Password
+        {{ t('password') }}
         <input type="password" name="password" required>
       </label>
       <label>
-        Full name
+        {{ t('setup_full_name') }}
         <input type="text" name="full_name">
       </label>
       <label>
-        Email
+        {{ t('settings_email') }}
         <input type="email" name="email">
       </label>
-      <button class="button primary" type="submit">Create tenant</button>
+      <button class="button primary" type="submit">{{ t('tenants_create') }}</button>
     </form>
   </section>
 {% endblock %}

@@ -1,18 +1,18 @@
 {% extends "base.html" %}
 {% block content %}
   <section class="card">
-    <h1>New maintenance request</h1>
+    <h1>{{ t('maintenance_new') }}</h1>
     <form method="post" action="{{ url_for('new_request') }}" class="form" enctype="multipart/form-data">
       <label>
-        Title
+        {{ t('col_title') }}
         <input type="text" name="title" required>
       </label>
       <label>
-        Description
+        {{ t('col_description') }}
         <textarea name="description" rows="5" required></textarea>
       </label>
       <label>
-        Priority
+        {{ t('col_priority') }}
         <select name="priority">
           <option value="Low">{{ t('priority_low') }}</option>
           <option value="Normal" selected>{{ t('priority_normal') }}</option>
@@ -21,10 +21,10 @@
         </select>
       </label>
       <label>
-        Image (optional)
+        {{ t('maintenance_image_optional') }}
         <input type="file" name="image" accept="image/png, image/jpeg, image/jpg, image/gif, image/webp">
       </label>
-      <button class="button primary" type="submit">Submit request</button>
+      <button class="button primary" type="submit">{{ t('btn_submit_request') }}</button>
     </form>
   </section>
 {% endblock %}

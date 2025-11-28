@@ -11,7 +11,7 @@
             <th>{{ t('col_tenant') }}</th>
             <th>{{ t('col_title') }}</th>
             <th>{{ t('col_description') }}</th>
-            <th>Image</th>
+            <th>{{ t('maintenance_image') }}</th>
             <th>{{ t('col_priority') }}</th>
             <th>{{ t('col_status') }}</th>
             <th>{{ t('col_update') }}</th>
@@ -36,12 +36,12 @@
               </td>
               <td>
                 {% if r.image_filename %}
-                  <a href="{{ r.image_filename }}" target="_blank" rel="noopener">View</a>
+                  <a href="{{ r.image_filename }}" target="_blank" rel="noopener">{{ t('maintenance_view') }}</a>
                   <div class="thumbnail-wrapper">
                     <img src="{{ r.image_filename }}" alt="Request image" class="thumbnail">
                   </div>
                 {% else %}
-                  <span class="muted-text">No image</span>
+                  <span class="muted-text">{{ t('maintenance_no_image') }}</span>
                 {% endif %}
               </td>
               <td>
@@ -58,7 +58,7 @@
                   {% set m_class = 'completed' %}
                 {% endif %}
                 <span class="status-badge status-{{ m_class }}">
-                  {{ r.status }}
+                  {% if r.status == 'Open' %}{{ t('status_open') }}{% elif r.status == 'In progress' %}{{ t('status_in_progress') }}{% else %}{{ t('status_completed') }}{% endif %}
                 </span>
                 {% if r.is_overdue %}
                   <span class="overdue-badge">{{ t('label_overdue') }}</span>
@@ -67,9 +67,9 @@
               <td>
                 <form method="post" action="{{ url_for('landlord_update_request_status', request_id=r.id) }}">
                   <select name="status">
-                    <option value="Open" {% if r.status == 'Open' %}selected{% endif %}>Open</option>
-                    <option value="In progress" {% if r.status == 'In progress' %}selected{% endif %}>In progress</option>
-                    <option value="Completed" {% if r.status == 'Completed' %}selected{% endif %}>Completed</option>
+                    <option value="Open" {% if r.status == 'Open' %}selected{% endif %}>{{ t('status_open') }}</option>
+                    <option value="In progress" {% if r.status == 'In progress' %}selected{% endif %}>{{ t('status_in_progress') }}</option>
+                    <option value="Completed" {% if r.status == 'Completed' %}selected{% endif %}>{{ t('status_completed') }}</option>
                   </select>
                   <button class="button small" type="submit">{{ t('btn_save') }}</button>
                 </form>

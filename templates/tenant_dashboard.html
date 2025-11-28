@@ -2,12 +2,12 @@
 {% block content %}
   {% if announcements %}
   <section class="card announcement-card">
-    <h2>📢 Announcements</h2>
+    <h2>📢 {{ t('announcements_title') }}</h2>
     {% for a in announcements %}
       <div class="announcement">
         <h3>{{ a.title }}</h3>
         <p>{{ a.content }}</p>
-        <small class="muted-text">Posted: {{ a.created_at[:10] if a.created_at else 'N/A' }}</small>
+        <small class="muted-text">{{ t('announcements_posted') }}: {{ a.created_at[:10] if a.created_at else 'N/A' }}</small>
       </div>
       {% if not loop.last %}<hr>{% endif %}
     {% endfor %}
@@ -23,7 +23,7 @@
       <p>
         {{ t('tenant_monthly_rent') }}:
         <strong>${{ '%.2f'|format(lease.monthly_rent or 0) }}</strong>
-        (due on day {{ lease.due_day }} each month)
+        ({{ t('rent_due_on_day') }} {{ lease.due_day }} {{ t('rent_each_month') }})
       </p>
       <p>
         {{ t('tenant_this_month_paid') }}:
@@ -39,53 +39,53 @@
           else 'unpaid')
         %}
         <span class="status-badge status-{{ rent_class }}">
-          {{ rent_status }}
+          {% if rent_status == 'Paid' %}{{ t('status_paid') }}{% elif rent_status == 'Partial' %}{{ t('status_partial') }}{% else %}{{ t('status_unpaid') }}{% endif %}
         </span>
       </p>
 
       <h3>{{ t('tenant_record_payment') }}</h3>
       <form method="post" action="{{ url_for('tenant_pay_rent') }}" class="form">
         <label>
-          Amount
+          {{ t('rent_amount') }}
           <input type="number" step="0.01" name="amount" required>
         </label>
         <label>
-          Method
+          {{ t('rent_method') }}
           <select name="method">
-            <option value="Cash">Cash</option>
-            <option value="Check">Check</option>
+            <option value="Cash">{{ t('rent_cash') }}</option>
+            <option value="Check">{{ t('rent_check') }}</option>
             <option value="Zelle">Zelle</option>
             <option value="Venmo">Venmo</option>
-            <option value="Bank transfer">Bank transfer</option>
-            <option value="Other">Other</option>
+            <option value="Bank transfer">{{ t('rent_bank_transfer') }}</option>
+            <option value="Other">{{ t('rent_other') }}</option>
           </select>
         </label>
         <label>
-          Note (optional)
+          {{ t('rent_note_optional') }}
           <textarea name="note" rows="2"></textarea>
         </label>
-        <button class="button primary" type="submit">Record payment</button>
+        <button class="button primary" type="submit">{{ t('rent_record_payment') }}</button>
       </form>
 
       <h3>{{ t('tenant_pay_online_heading') }}</h3>
       <form method="post" action="{{ url_for('tenant_stripe_checkout') }}" class="form">
         <p>
-          You will be redirected to a secure payment page to pay the remaining balance for this month.
+          {{ t('rent_stripe_redirect') }}
         </p>
         <button class="button primary" type="submit">{{ t('tenant_pay_online_button') }}</button>
       </form>
 
-      <h3>Recent rent payments</h3>
+      <h3>{{ t('rent_recent_payments') }}</h3>
       {% if recent_payments %}
         <table class="table">
           <thead>
             <tr>
-              <th>Paid at</th>
-              <th>Amount</th>
-              <th>Month</th>
-              <th>Year</th>
-              <th>Method</th>
-              <th>Note</th>
+              <th>{{ t('rent_paid_at') }}</th>
+              <th>{{ t('rent_amount') }}</th>
+              <th>{{ t('rent_month') }}</th>
+              <th>{{ t('rent_year') }}</th>
+              <th>{{ t('rent_method') }}</th>
+              <th>{{ t('rent_note') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -102,16 +102,16 @@
           </tbody>
         </table>
       {% else %}
-        <p>No rent payments recorded yet.</p>
+        <p>{{ t('rent_no_payments') }}</p>
       {% endif %}
     {% else %}
-      <p>You do not have an active lease. Please contact your landlord.</p>
+      <p>{{ t('rent_no_lease') }}</p>
     {% endif %}
   </section>
 
   <section class="card">
-    <h2>Maintenance requests</h2>
-    <p><a class="button primary" href="{{ url_for('new_request') }}">Submit a new request</a></p>
+    <h2>{{ t('maintenance_requests') }}</h2>
+    <p><a class="button primary" href="{{ url_for('new_request') }}">{{ t('maintenance_submit_new') }}</a></p>
     {% if requests %}
       <table class="table">
         <thead>
@@ -119,7 +119,7 @@
             <th>{{ t('col_created') }}</th>
             <th>{{ t('col_title') }}</th>
             <th>{{ t('col_description') }}</th>
-            <th>Image</th>
+            <th>{{ t('maintenance_image') }}</th>
             <th>{{ t('col_priority') }}</th>
             <th>{{ t('col_status') }}</th>
           </tr>
@@ -135,12 +135,12 @@
               <td>{{ r.description }}</td>
               <td>
                 {% if r.image_filename %}
-                  <a href="{{ r.image_filename }}" target="_blank" rel="noopener">View</a>
+                  <a href="{{ r.image_filename }}" target="_blank" rel="noopener">{{ t('maintenance_view') }}</a>
                   <div class="thumbnail-wrapper">
                     <img src="{{ r.image_filename }}" alt="Request image" class="thumbnail">
                   </div>
                 {% else %}
-                  <span class="muted-text">No image</span>
+                  <span class="muted-text">{{ t('maintenance_no_image') }}</span>
                 {% endif %}
               </td>
               <td>
@@ -157,7 +157,7 @@
                   {% set m_class = 'completed' %}
                 {% endif %}
                 <span class="status-badge status-{{ m_class }}">
-                  {{ r.status }}
+                  {% if r.status == 'Open' %}{{ t('status_open') }}{% elif r.status == 'In progress' %}{{ t('status_in_progress') }}{% else %}{{ t('status_completed') }}{% endif %}
                 </span>
                 {% if r.is_overdue %}
                   <span class="overdue-badge">{{ t('label_overdue') }}</span>
@@ -168,7 +168,7 @@
         </tbody>
       </table>
     {% else %}
-      <p>You have no maintenance requests yet.</p>
+      <p>{{ t('maintenance_none') }}</p>
     {% endif %}
   </section>
 {% endblock %}

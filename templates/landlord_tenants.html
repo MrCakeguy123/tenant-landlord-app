@@ -1,33 +1,33 @@
 {% extends "base.html" %}
 {% block content %}
   <section class="card">
-    <h1>Tenants</h1>
+    <h1>{{ t('tenants_title') }}</h1>
     <p>
-      <a class="button" href="{{ url_for('landlord_dashboard') }}">Back to dashboard</a>
-      <a class="button primary" href="{{ url_for('landlord_new_tenant') }}">New tenant</a>
+      <a class="button" href="{{ url_for('landlord_dashboard') }}">{{ t('back_to_dashboard') }}</a>
+      <a class="button primary" href="{{ url_for('landlord_new_tenant') }}">{{ t('tenants_new') }}</a>
     </p>
 
     {% if tenants %}
       <table class="table">
         <thead>
           <tr>
-            <th>Username</th>
-            <th>Full name</th>
-            <th>Email</th>
+            <th>{{ t('username') }}</th>
+            <th>{{ t('setup_full_name') }}</th>
+            <th>{{ t('settings_email') }}</th>
           </tr>
         </thead>
         <tbody>
-          {% for t in tenants %}
+          {% for tenant in tenants %}
             <tr>
-              <td>{{ t.username }}</td>
-              <td>{{ t.full_name or '' }}</td>
-              <td>{{ t.email or '' }}</td>
+              <td>{{ tenant.username }}</td>
+              <td>{{ tenant.full_name or '' }}</td>
+              <td>{{ tenant.email or '' }}</td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
     {% else %}
-      <p>No tenants yet.</p>
+      <p>{{ t('tenants_none') }}</p>
     {% endif %}
   </section>
 {% endblock %}

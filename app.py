@@ -171,8 +171,143 @@ TRANSLATIONS = {
     # ----------------------
     "nav_settings": {"en": "Settings", "es": "Configuración"},
     "settings_title": {"en": "Settings", "es": "Configuración"},
+    "settings_subtitle": {"en": "Manage your account", "es": "Administra tu cuenta"},
     "settings_profile": {"en": "Profile Information", "es": "Información del perfil"},
     "settings_password": {"en": "Change Password", "es": "Cambiar contraseña"},
+    "settings_username": {"en": "Username", "es": "Nombre de usuario"},
+    "settings_username_hint": {"en": "Username cannot be changed", "es": "El nombre de usuario no se puede cambiar"},
+    "settings_full_name": {"en": "Full Name", "es": "Nombre completo"},
+    "settings_email": {"en": "Email", "es": "Correo electrónico"},
+    "settings_role": {"en": "Role", "es": "Rol"},
+    "settings_update_profile": {"en": "Update Profile", "es": "Actualizar perfil"},
+    "settings_current_password": {"en": "Current Password", "es": "Contraseña actual"},
+    "settings_new_password": {"en": "New Password", "es": "Nueva contraseña"},
+    "settings_confirm_password": {"en": "Confirm New Password", "es": "Confirmar nueva contraseña"},
+    "settings_change_password": {"en": "Change Password", "es": "Cambiar contraseña"},
+    "back_to_dashboard": {"en": "← Back to Dashboard", "es": "← Volver al panel"},
+    # ----------------------
+    # Calendar
+    # ----------------------
+    "calendar_title": {"en": "Calendar", "es": "Calendario"},
+    "calendar_subtitle": {"en": "View rent due dates, lease dates, and maintenance requests", "es": "Ver fechas de vencimiento de renta, fechas de contrato y solicitudes de mantenimiento"},
+    "calendar_rent_due": {"en": "Rent Due", "es": "Renta vence"},
+    "calendar_lease_start": {"en": "Lease Start", "es": "Inicio de contrato"},
+    "calendar_lease_end": {"en": "Lease End", "es": "Fin de contrato"},
+    "calendar_maintenance_open": {"en": "Maintenance (Open)", "es": "Mantenimiento (Abierto)"},
+    "calendar_maintenance_closed": {"en": "Maintenance (Closed)", "es": "Mantenimiento (Cerrado)"},
+    "calendar_announcement": {"en": "Announcement", "es": "Anuncio"},
+    # ----------------------
+    # Announcements
+    # ----------------------
+    "announcements_title": {"en": "Announcements", "es": "Anuncios"},
+    "announcements_subtitle": {"en": "Post notices for your tenants", "es": "Publica avisos para tus inquilinos"},
+    "announcements_new": {"en": "+ New Announcement", "es": "+ Nuevo anuncio"},
+    "announcements_new_title": {"en": "New Announcement", "es": "Nuevo anuncio"},
+    "announcements_new_subtitle": {"en": "Post a notice to all your tenants", "es": "Publica un aviso para todos tus inquilinos"},
+    "announcements_posted": {"en": "Posted", "es": "Publicado"},
+    "announcements_expires": {"en": "Expires", "es": "Expira"},
+    "announcements_never": {"en": "Never", "es": "Nunca"},
+    "announcements_active": {"en": "Active", "es": "Activo"},
+    "announcements_inactive": {"en": "Inactive", "es": "Inactivo"},
+    "announcements_activate": {"en": "Activate", "es": "Activar"},
+    "announcements_deactivate": {"en": "Deactivate", "es": "Desactivar"},
+    "announcements_delete": {"en": "Delete", "es": "Eliminar"},
+    "announcements_delete_confirm": {"en": "Delete this announcement?", "es": "¿Eliminar este anuncio?"},
+    "announcements_none": {"en": "No announcements yet. Create one to notify your tenants!", "es": "No hay anuncios todavía. ¡Crea uno para notificar a tus inquilinos!"},
+    "announcements_content": {"en": "Content", "es": "Contenido"},
+    "announcements_expires_optional": {"en": "Expires (optional)", "es": "Expira (opcional)"},
+    "announcements_expires_hint": {"en": "Leave empty for no expiration", "es": "Deja vacío para que no expire"},
+    "announcements_post": {"en": "Post Announcement", "es": "Publicar anuncio"},
+    "cancel": {"en": "Cancel", "es": "Cancelar"},
+    "actions": {"en": "Actions", "es": "Acciones"},
+    # ----------------------
+    # Login / Setup / Index
+    # ----------------------
+    "login_title": {"en": "Log in", "es": "Iniciar sesión"},
+    "password": {"en": "Password", "es": "Contraseña"},
+    "username": {"en": "Username", "es": "Nombre de usuario"},
+    "welcome_title": {"en": "Welcome", "es": "Bienvenido"},
+    "welcome_subtitle": {"en": "This is a simple tenant/landlord app.", "es": "Esta es una aplicación simple para inquilinos y propietarios."},
+    "welcome_setup_hint": {"en": "If you haven't set things up yet, go to", "es": "Si aún no has configurado, ve a"},
+    "setup_title": {"en": "Initial setup", "es": "Configuración inicial"},
+    "setup_subtitle": {"en": "Create a landlord, a tenant, and the first lease.", "es": "Crea un propietario, un inquilino y el primer contrato."},
+    "setup_landlord": {"en": "Landlord", "es": "Propietario"},
+    "setup_tenant": {"en": "Tenant", "es": "Inquilino"},
+    "setup_lease": {"en": "Lease", "es": "Contrato"},
+    "setup_full_name": {"en": "Full name", "es": "Nombre completo"},
+    "setup_monthly_rent": {"en": "Monthly rent", "es": "Renta mensual"},
+    "setup_due_day": {"en": "Due day of month", "es": "Día de vencimiento del mes"},
+    "setup_complete": {"en": "Complete setup", "es": "Completar configuración"},
+    "setup": {"en": "setup", "es": "configuración"},
+    # ----------------------
+    # Maintenance Requests
+    # ----------------------
+    "maintenance_requests": {"en": "Maintenance requests", "es": "Solicitudes de mantenimiento"},
+    "maintenance_new": {"en": "New maintenance request", "es": "Nueva solicitud de mantenimiento"},
+    "maintenance_submit_new": {"en": "Submit a new request", "es": "Enviar una nueva solicitud"},
+    "maintenance_none": {"en": "You have no maintenance requests yet.", "es": "Aún no tienes solicitudes de mantenimiento."},
+    "maintenance_image": {"en": "Image", "es": "Imagen"},
+    "maintenance_image_optional": {"en": "Image (optional)", "es": "Imagen (opcional)"},
+    "maintenance_no_image": {"en": "No image", "es": "Sin imagen"},
+    "maintenance_view": {"en": "View", "es": "Ver"},
+    # ----------------------
+    # Rent / Payments
+    # ----------------------
+    "rent_due_on_day": {"en": "due on day", "es": "vence el día"},
+    "rent_each_month": {"en": "each month", "es": "de cada mes"},
+    "rent_record_payment": {"en": "Record payment", "es": "Registrar pago"},
+    "rent_amount": {"en": "Amount", "es": "Monto"},
+    "rent_method": {"en": "Method", "es": "Método"},
+    "rent_note_optional": {"en": "Note (optional)", "es": "Nota (opcional)"},
+    "rent_cash": {"en": "Cash", "es": "Efectivo"},
+    "rent_check": {"en": "Check", "es": "Cheque"},
+    "rent_bank_transfer": {"en": "Bank transfer", "es": "Transferencia bancaria"},
+    "rent_other": {"en": "Other", "es": "Otro"},
+    "rent_stripe_redirect": {"en": "You will be redirected to a secure payment page to pay the remaining balance for this month.", "es": "Serás redirigido a una página de pago segura para pagar el saldo restante de este mes."},
+    "rent_recent_payments": {"en": "Recent rent payments", "es": "Pagos de renta recientes"},
+    "rent_no_payments": {"en": "No rent payments recorded yet.", "es": "No hay pagos de renta registrados todavía."},
+    "rent_no_lease": {"en": "You do not have an active lease. Please contact your landlord.", "es": "No tienes un contrato activo. Por favor contacta a tu propietario."},
+    "rent_paid_at": {"en": "Paid at", "es": "Pagado el"},
+    "rent_month": {"en": "Month", "es": "Mes"},
+    "rent_year": {"en": "Year", "es": "Año"},
+    "rent_note": {"en": "Note", "es": "Nota"},
+    # ----------------------
+    # Status labels
+    # ----------------------
+    "status_paid": {"en": "Paid", "es": "Pagado"},
+    "status_partial": {"en": "Partial", "es": "Parcial"},
+    "status_unpaid": {"en": "Unpaid", "es": "Sin pagar"},
+    "status_open": {"en": "Open", "es": "Abierto"},
+    "status_in_progress": {"en": "In progress", "es": "En progreso"},
+    "status_completed": {"en": "Completed", "es": "Completado"},
+    # ----------------------
+    # Roles
+    # ----------------------
+    "role_tenant": {"en": "Tenant", "es": "Inquilino"},
+    "role_landlord": {"en": "Landlord", "es": "Propietario"},
+    # ----------------------
+    # Landlord pages
+    # ----------------------
+    "leases_title": {"en": "Leases", "es": "Contratos"},
+    "leases_new": {"en": "New lease", "es": "Nuevo contrato"},
+    "leases_start_date": {"en": "Start date", "es": "Fecha de inicio"},
+    "leases_end_date": {"en": "End date", "es": "Fecha de fin"},
+    "leases_active": {"en": "Active", "es": "Activo"},
+    "leases_toggle": {"en": "Toggle", "es": "Cambiar"},
+    "leases_none": {"en": "No leases yet.", "es": "No hay contratos todavía."},
+    "yes": {"en": "Yes", "es": "Sí"},
+    "no": {"en": "No", "es": "No"},
+    "tenants_title": {"en": "Tenants", "es": "Inquilinos"},
+    "tenants_new": {"en": "New tenant", "es": "Nuevo inquilino"},
+    "tenants_none": {"en": "No tenants yet.", "es": "No hay inquilinos todavía."},
+    "tenants_back": {"en": "Back to tenants", "es": "Volver a inquilinos"},
+    "tenants_create": {"en": "Create tenant", "es": "Crear inquilino"},
+    "leases_back": {"en": "Back to leases", "es": "Volver a contratos"},
+    "leases_select_tenant": {"en": "Select tenant...", "es": "Seleccionar inquilino..."},
+    "leases_start_optional": {"en": "Start date (optional)", "es": "Fecha de inicio (opcional)"},
+    "leases_end_optional": {"en": "End date (optional)", "es": "Fecha de fin (opcional)"},
+    "leases_save": {"en": "Save lease", "es": "Guardar contrato"},
+    "last_updated": {"en": "Last updated", "es": "Última actualización"},
 }
 
 

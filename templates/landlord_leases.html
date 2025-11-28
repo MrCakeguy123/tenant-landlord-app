@@ -1,23 +1,23 @@
 {% extends "base.html" %}
 {% block content %}
   <section class="card">
-    <h1>Leases</h1>
+    <h1>{{ t('leases_title') }}</h1>
     <p>
-      <a class="button" href="{{ url_for('landlord_dashboard') }}">Back to dashboard</a>
-      <a class="button primary" href="{{ url_for('landlord_new_lease') }}">New lease</a>
+      <a class="button" href="{{ url_for('landlord_dashboard') }}">{{ t('back_to_dashboard') }}</a>
+      <a class="button primary" href="{{ url_for('landlord_new_lease') }}">{{ t('leases_new') }}</a>
     </p>
 
     {% if leases %}
       <table class="table">
         <thead>
           <tr>
-            <th>Tenant</th>
-            <th>Monthly rent</th>
-            <th>Due day</th>
-            <th>Start date</th>
-            <th>End date</th>
-            <th>Active</th>
-            <th>Toggle</th>
+            <th>{{ t('col_tenant') }}</th>
+            <th>{{ t('col_monthly_rent') }}</th>
+            <th>{{ t('col_due_day') }}</th>
+            <th>{{ t('leases_start_date') }}</th>
+            <th>{{ t('leases_end_date') }}</th>
+            <th>{{ t('leases_active') }}</th>
+            <th>{{ t('leases_toggle') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -28,11 +28,11 @@
               <td>{{ l.due_day }}</td>
               <td>{{ l.start_date or '' }}</td>
               <td>{{ l.end_date or '' }}</td>
-              <td>{{ 'Yes' if l.is_active else 'No' }}</td>
+              <td>{% if l.is_active %}{{ t('yes') }}{% else %}{{ t('no') }}{% endif %}</td>
               <td>
                 <form method="post" action="{{ url_for('landlord_toggle_lease', lease_id=l.id) }}">
                   <button class="button small" type="submit">
-                    {% if l.is_active %}Deactivate{% else %}Activate{% endif %}
+                    {% if l.is_active %}{{ t('announcements_deactivate') }}{% else %}{{ t('announcements_activate') }}{% endif %}
                   </button>
                 </form>
               </td>
@@ -41,7 +41,7 @@
         </tbody>
       </table>
     {% else %}
-      <p>No leases yet.</p>
+      <p>{{ t('leases_none') }}</p>
     {% endif %}
   </section>
 {% endblock %}

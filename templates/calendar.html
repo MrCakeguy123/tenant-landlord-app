@@ -1,22 +1,22 @@
 {% extends "base.html" %}
 {% block content %}
   <section class="card">
-    <h1>📆 Calendar</h1>
-    <p class="subtitle">View rent due dates, lease dates, and maintenance requests</p>
+    <h1>📆 {{ t('calendar_title') }}</h1>
+    <p class="subtitle">{{ t('calendar_subtitle') }}</p>
     <p>
-      <a class="button" href="{{ url_for('dashboard') }}">← Back to Dashboard</a>
+      <a class="button" href="{{ url_for('dashboard') }}">{{ t('back_to_dashboard') }}</a>
     </p>
   </section>
 
   <section class="card">
     <div class="calendar-legend">
-      <span class="legend-item"><span class="legend-color" style="background:#e74c3c;"></span> Rent Due</span>
-      <span class="legend-item"><span class="legend-color" style="background:#27ae60;"></span> Lease Start</span>
-      <span class="legend-item"><span class="legend-color" style="background:#e67e22;"></span> Lease End</span>
-      <span class="legend-item"><span class="legend-color" style="background:#3498db;"></span> Maintenance (Open)</span>
-      <span class="legend-item"><span class="legend-color" style="background:#95a5a6;"></span> Maintenance (Closed)</span>
+      <span class="legend-item"><span class="legend-color" style="background:#e74c3c;"></span> {{ t('calendar_rent_due') }}</span>
+      <span class="legend-item"><span class="legend-color" style="background:#27ae60;"></span> {{ t('calendar_lease_start') }}</span>
+      <span class="legend-item"><span class="legend-color" style="background:#e67e22;"></span> {{ t('calendar_lease_end') }}</span>
+      <span class="legend-item"><span class="legend-color" style="background:#3498db;"></span> {{ t('calendar_maintenance_open') }}</span>
+      <span class="legend-item"><span class="legend-color" style="background:#95a5a6;"></span> {{ t('calendar_maintenance_closed') }}</span>
       {% if user.role == 'landlord' %}
-      <span class="legend-item"><span class="legend-color" style="background:#9b59b6;"></span> Announcement</span>
+      <span class="legend-item"><span class="legend-color" style="background:#9b59b6;"></span> {{ t('calendar_announcement') }}</span>
       {% endif %}
     </div>
     <div id="calendar"></div>
@@ -77,6 +77,7 @@
       var calendarEl = document.getElementById('calendar');
       var calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
+        locale: '{{ current_lang }}',
         headerToolbar: {
           left: 'prev,next today',
           center: 'title',
@@ -101,4 +102,3 @@
     });
   </script>
 {% endblock %}
-
