@@ -7,6 +7,7 @@ import json
 import requests
 import stripe
 from flask import Flask, render_template, request, redirect, url_for, session, flash
+from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
 from supabase_client import get_supabase, get_supabase_url, STORAGE_BUCKET
@@ -614,7 +615,7 @@ def setup():
                 # Create landlord
                 landlord_resp = supabase.table("users").insert({
                     "username": landlord_username,
-                    "password": landlord_password,
+                    "password": generate_password_hash(landlord_password),
                     "role": "landlord",
                     "full_name": landlord_full_name or None,
                     "email": landlord_email or None,
@@ -624,7 +625,7 @@ def setup():
                 # Create tenant
                 tenant_resp = supabase.table("users").insert({
                     "username": tenant_username,
-                    "password": tenant_password,
+                    "password": generate_password_hash(tenant_password),
                     "role": "tenant",
                     "full_name": tenant_full_name or None,
                     "email": tenant_email or None,
@@ -665,7 +666,7 @@ def login():
         password = request.form.get("password", "").strip()
         logger.debug("Login attempt for username=%s", username)
         user = get_user_by_username(username)
-        if user and user["password"] == password:
+        if user and check_password_hash(user["password"], password):
             login_user(user)
             next_page = request.args.get("next")
             logger.info(
@@ -1443,7 +1444,7 @@ def landlord_new_tenant():
             supabase = require_supabase()
             supabase.table("users").insert({
                 "username": username,
-                "password": password,
+                "password": generate_password_hash(password),
                 "role": "tenant",
                 "full_name": full_name or None,
                 "email": email or None,
