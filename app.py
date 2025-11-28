@@ -308,6 +308,8 @@ TRANSLATIONS = {
     "leases_end_optional": {"en": "End date (optional)", "es": "Fecha de fin (opcional)"},
     "leases_save": {"en": "Save lease", "es": "Guardar contrato"},
     "last_updated": {"en": "Last updated", "es": "Última actualización"},
+    "maintenance_delete": {"en": "Delete", "es": "Eliminar"},
+    "maintenance_delete_confirm": {"en": "Delete this maintenance request?", "es": "¿Eliminar esta solicitud de mantenimiento?"},
 }
 
 
@@ -1800,6 +1802,39 @@ def landlord_update_request_status(request_id):
     except Exception as e:
         logger.exception("Error updating request status: %s", e)
         flash("Error updating status. Please try again.", "danger")
+    
+    return redirect(url_for("landlord_requests"))
+
+
+@app.route("/landlord/requests/<int:request_id>/delete", methods=["POST"])
+@login_required(role="landlord")
+def landlord_delete_request(request_id):
+    """Delete a maintenance request."""
+    user = get_current_user()
+    logger.debug("Landlord id=%s deleting maintenance request id=%s", user["id"], request_id)
+
+    try:
+        supabase = require_supabase()
+        
+        # Verify the request belongs to one of this landlord's tenants
+        leases_resp = (
+            supabase.table("leases")
+            .select("tenant_id")
+            .eq("landlord_id", user["id"])
+            .execute()
+        )
+        tenant_ids = [l["tenant_id"] for l in (leases_resp.data or [])]
+        
+        if tenant_ids:
+            # Delete the request if it belongs to one of the landlord's tenants
+            supabase.table("maintenance_requests").delete().eq("id", request_id).in_("tenant_id", tenant_ids).execute()
+            logger.info("Maintenance request id=%s deleted by landlord id=%s", request_id, user["id"])
+            flash("Maintenance request deleted.", "success")
+        else:
+            flash("Request not found.", "danger")
+    except Exception as e:
+        logger.exception("Error deleting maintenance request: %s", e)
+        flash("Error deleting request. Please try again.", "danger")
     
     return redirect(url_for("landlord_requests"))
 
