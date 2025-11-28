@@ -121,9 +121,9 @@
               <td>{{ r.description }}</td>
               <td>
                 {% if r.image_filename %}
-                  <a href="{{ url_for('static', filename='uploads/' ~ r.image_filename) }}" target="_blank" rel="noopener">View</a>
+                  <a href="{{ r.image_filename }}" target="_blank" rel="noopener">View</a>
                   <div class="thumbnail-wrapper">
-                    <img src="{{ url_for('static', filename='uploads/' ~ r.image_filename) }}" alt="Request image" class="thumbnail">
+                    <img src="{{ r.image_filename }}" alt="Request image" class="thumbnail">
                   </div>
                 {% else %}
                   <span class="muted-text">No image</span>

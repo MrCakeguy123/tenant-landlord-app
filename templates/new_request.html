@@ -12,6 +12,15 @@
         <textarea name="description" rows="5" required></textarea>
       </label>
       <label>
+        Priority
+        <select name="priority">
+          <option value="Low">{{ t('priority_low') }}</option>
+          <option value="Normal" selected>{{ t('priority_normal') }}</option>
+          <option value="High">{{ t('priority_high') }}</option>
+          <option value="Emergency">{{ t('priority_emergency') }}</option>
+        </select>
+      </label>
+      <label>
         Image (optional)
         <input type="file" name="image" accept="image/png, image/jpeg, image/jpg, image/gif, image/webp">
       </label>

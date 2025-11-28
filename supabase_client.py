@@ -18,6 +18,14 @@ SUPABASE_KEY = (
     or os.environ.get("NEXT_PUBLIC_SUPABASE_ANON_KEY")
 )
 
+# Storage bucket name for maintenance images
+STORAGE_BUCKET = "maintenance-images"
+
+
+def get_supabase_url() -> Optional[str]:
+    """Return the Supabase project URL."""
+    return SUPABASE_URL
+
 _supabase_client: Optional[Client] = None
 
 

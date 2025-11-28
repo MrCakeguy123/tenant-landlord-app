@@ -9,7 +9,7 @@ import stripe
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.utils import secure_filename
 
-from supabase_client import get_supabase
+from supabase_client import get_supabase, get_supabase_url, STORAGE_BUCKET
 
 
 # -----------------------
@@ -275,6 +275,46 @@ def require_supabase():
     if supabase is None:
         raise RuntimeError("Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.")
     return supabase
+
+
+def upload_image_to_storage(file, filename):
+    """
+    Upload an image file to Supabase Storage.
+    Returns the public URL of the uploaded image, or None on failure.
+    """
+    try:
+        supabase = require_supabase()
+        supabase_url = get_supabase_url()
+        
+        # Read file content
+        file_content = file.read()
+        
+        # Determine content type
+        ext = filename.rsplit(".", 1)[-1].lower()
+        content_types = {
+            "png": "image/png",
+            "jpg": "image/jpeg",
+            "jpeg": "image/jpeg",
+            "gif": "image/gif",
+            "webp": "image/webp",
+        }
+        content_type = content_types.get(ext, "application/octet-stream")
+        
+        # Upload to Supabase Storage
+        response = supabase.storage.from_(STORAGE_BUCKET).upload(
+            path=filename,
+            file=file_content,
+            file_options={"content-type": content_type}
+        )
+        
+        # Construct public URL
+        public_url = f"{supabase_url}/storage/v1/object/public/{STORAGE_BUCKET}/{filename}"
+        logger.info("Uploaded image to Supabase Storage: %s", public_url)
+        return public_url
+        
+    except Exception as e:
+        logger.exception("Failed to upload image to Supabase Storage: %s", e)
+        return None
 
 
 # -----------------------
@@ -793,15 +833,21 @@ def new_request():
                 user["id"],
             )
         else:
+            image_url = None
             if image_file and image_file.filename:
                 safe_name = secure_filename(image_file.filename)
-                image_filename = f"{uuid.uuid4().hex}_{safe_name}"
-                save_path = os.path.join(app.config["UPLOAD_FOLDER"], image_filename)
-                image_file.save(save_path)
-                logger.debug(
-                    "Saved maintenance request image for tenant id=%s to %s",
-                    user["id"], save_path,
-                )
+                storage_filename = f"{uuid.uuid4().hex}_{safe_name}"
+                image_url = upload_image_to_storage(image_file, storage_filename)
+                if image_url:
+                    logger.debug(
+                        "Uploaded maintenance request image for tenant id=%s to %s",
+                        user["id"], image_url,
+                    )
+                else:
+                    logger.warning(
+                        "Failed to upload image for tenant id=%s, continuing without image",
+                        user["id"],
+                    )
 
             try:
                 supabase = require_supabase()
@@ -811,7 +857,7 @@ def new_request():
                     "description": description,
                     "status": "Open",
                     "priority": priority,
-                    "image_filename": image_filename,
+                    "image_filename": image_url,  # Now stores the full URL
                 }).execute()
                 
                 logger.info(
