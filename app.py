@@ -166,6 +166,13 @@ TRANSLATIONS = {
     # ----------------------
     "btn_save": {"en": "Save", "es": "Guardar"},
     "btn_submit_request": {"en": "Submit request", "es": "Enviar solicitud"},
+    # ----------------------
+    # Settings
+    # ----------------------
+    "nav_settings": {"en": "Settings", "es": "Configuración"},
+    "settings_title": {"en": "Settings", "es": "Configuración"},
+    "settings_profile": {"en": "Profile Information", "es": "Información del perfil"},
+    "settings_password": {"en": "Change Password", "es": "Cambiar contraseña"},
 }
 
 
@@ -723,6 +730,98 @@ def dashboard():
     if user["role"] == "landlord":
         return redirect(url_for("landlord_dashboard"))
     return redirect(url_for("tenant_dashboard"))
+
+
+# -----------------------
+# Settings / Profile
+# -----------------------
+
+@app.route("/settings")
+@login_required()
+def settings():
+    """Display user settings page."""
+    user = get_current_user()
+    logger.debug("Settings page requested by user id=%s", user["id"])
+    return render_template("settings.html", user=user)
+
+
+@app.route("/settings/profile", methods=["POST"])
+@login_required()
+def update_profile():
+    """Update user profile information."""
+    user = get_current_user()
+    full_name = request.form.get("full_name", "").strip()
+    email = request.form.get("email", "").strip()
+    
+    logger.debug("Profile update for user id=%s: full_name=%s, email=%s", user["id"], full_name, email)
+    
+    try:
+        supabase = require_supabase()
+        supabase.table("users").update({
+            "full_name": full_name or None,
+            "email": email or None,
+        }).eq("id", user["id"]).execute()
+        
+        logger.info("Profile updated for user id=%s", user["id"])
+        flash("Profile updated successfully.", "success")
+    except Exception as e:
+        logger.exception("Error updating profile for user id=%s: %s", user["id"], e)
+        flash("Error updating profile. Please try again.", "danger")
+    
+    return redirect(url_for("settings"))
+
+
+@app.route("/settings/password", methods=["POST"])
+@login_required()
+def change_password():
+    """Change user password."""
+    user = get_current_user()
+    current_password = request.form.get("current_password", "").strip()
+    new_password = request.form.get("new_password", "").strip()
+    confirm_password = request.form.get("confirm_password", "").strip()
+    
+    logger.debug("Password change attempt for user id=%s", user["id"])
+    
+    # Validation
+    if not current_password or not new_password or not confirm_password:
+        flash("Please fill in all password fields.", "warning")
+        return redirect(url_for("settings"))
+    
+    if new_password != confirm_password:
+        flash("New passwords do not match.", "warning")
+        return redirect(url_for("settings"))
+    
+    if len(new_password) < 6:
+        flash("New password must be at least 6 characters.", "warning")
+        return redirect(url_for("settings"))
+    
+    # Verify current password
+    stored_password = user["password"]
+    password_valid = False
+    
+    if stored_password.startswith(("scrypt:", "pbkdf2:", "sha256:")):
+        password_valid = check_password_hash(stored_password, current_password)
+    else:
+        password_valid = (stored_password == current_password)
+    
+    if not password_valid:
+        logger.warning("Password change failed for user id=%s: incorrect current password", user["id"])
+        flash("Current password is incorrect.", "danger")
+        return redirect(url_for("settings"))
+    
+    # Update password
+    try:
+        supabase = require_supabase()
+        new_hash = generate_password_hash(new_password)
+        supabase.table("users").update({"password": new_hash}).eq("id", user["id"]).execute()
+        
+        logger.info("Password changed for user id=%s", user["id"])
+        flash("Password changed successfully.", "success")
+    except Exception as e:
+        logger.exception("Error changing password for user id=%s: %s", user["id"], e)
+        flash("Error changing password. Please try again.", "danger")
+    
+    return redirect(url_for("settings"))
 
 
 # -----------------------

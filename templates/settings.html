@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="card">
+    <h1>Settings</h1>
+    <p class="subtitle">Manage your account</p>
+  </section>
+
+  <section class="card">
+    <h2>Profile Information</h2>
+    <form method="post" action="{{ url_for('update_profile') }}" class="form">
+      <label>
+        Username
+        <input type="text" value="{{ user.username }}" disabled>
+        <small class="form-hint">Username cannot be changed</small>
+      </label>
+      <label>
+        Full Name
+        <input type="text" name="full_name" value="{{ user.full_name or '' }}" placeholder="Enter your full name">
+      </label>
+      <label>
+        Email
+        <input type="email" name="email" value="{{ user.email or '' }}" placeholder="Enter your email">
+      </label>
+      <label>
+        Role
+        <input type="text" value="{{ user.role|capitalize }}" disabled>
+      </label>
+      <button class="button primary" type="submit">Update Profile</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Change Password</h2>
+    <form method="post" action="{{ url_for('change_password') }}" class="form">
+      <label>
+        Current Password
+        <input type="password" name="current_password" required placeholder="Enter your current password">
+      </label>
+      <label>
+        New Password
+        <input type="password" name="new_password" required placeholder="Enter new password (min 6 characters)">
+      </label>
+      <label>
+        Confirm New Password
+        <input type="password" name="confirm_password" required placeholder="Confirm new password">
+      </label>
+      <button class="button primary" type="submit">Change Password</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <p>
+      <a class="button" href="{{ url_for('dashboard') }}">← Back to Dashboard</a>
+    </p>
+  </section>
+{% endblock %}
+
