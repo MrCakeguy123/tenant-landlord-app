@@ -666,18 +666,43 @@ def login():
         password = request.form.get("password", "").strip()
         logger.debug("Login attempt for username=%s", username)
         user = get_user_by_username(username)
-        if user and check_password_hash(user["password"], password):
-            login_user(user)
-            next_page = request.args.get("next")
-            logger.info(
-                "Login successful for username=%s; redirecting to %s",
-                username,
-                next_page or "dashboard",
-            )
-            return redirect(next_page or url_for("dashboard"))
-        else:
-            logger.warning("Login failed for username=%s", username)
-            flash("Invalid username or password.", "danger")
+        
+        if user:
+            stored_password = user["password"]
+            password_valid = False
+            needs_upgrade = False
+            
+            # Check if password is hashed (starts with hash algorithm identifier)
+            if stored_password.startswith(("scrypt:", "pbkdf2:", "sha256:")):
+                # Verify hashed password
+                password_valid = check_password_hash(stored_password, password)
+            else:
+                # Legacy plaintext password check
+                password_valid = (stored_password == password)
+                needs_upgrade = password_valid  # Upgrade if correct
+            
+            if password_valid:
+                # Upgrade plaintext password to hashed (one-time migration)
+                if needs_upgrade:
+                    try:
+                        supabase = require_supabase()
+                        new_hash = generate_password_hash(password)
+                        supabase.table("users").update({"password": new_hash}).eq("id", user["id"]).execute()
+                        logger.info("Upgraded password to hashed for user id=%s", user["id"])
+                    except Exception as e:
+                        logger.warning("Failed to upgrade password for user id=%s: %s", user["id"], e)
+                
+                login_user(user)
+                next_page = request.args.get("next")
+                logger.info(
+                    "Login successful for username=%s; redirecting to %s",
+                    username,
+                    next_page or "dashboard",
+                )
+                return redirect(next_page or url_for("dashboard"))
+        
+        logger.warning("Login failed for username=%s", username)
+        flash("Invalid username or password.", "danger")
 
     return render_template("login.html")
 
