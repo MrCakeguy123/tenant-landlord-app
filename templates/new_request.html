@@ -2,7 +2,7 @@
 {% block content %}
   <section class="card">
     <h1>New maintenance request</h1>
-    <form method="post" action="{{ url_for('new_request') }}" class="form" enctype="multipart/form-data">
+    <form method="post" action="{{ url_for('new_request') }}" class="form">
       <label>
         Title
         <input type="text" name="title" required>
@@ -10,10 +10,6 @@
       <label>
         Description
         <textarea name="description" rows="5" required></textarea>
-      </label>
-      <label>
-        Image (optional)
-        <input type="file" name="image" accept="image/png, image/jpeg, image/jpg, image/gif, image/webp">
       </label>
       <button class="button primary" type="submit">Submit request</button>
     </form>

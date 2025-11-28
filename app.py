@@ -1,5 +1,4 @@
 import os
-import uuid
 import sqlite3
 import logging
 import datetime
@@ -8,7 +7,6 @@ import json
 import requests
 import stripe
 from flask import Flask, g, render_template, request, redirect, url_for, session, flash
-from werkzeug.utils import secure_filename
 
 
 # -----------------------
@@ -18,11 +16,6 @@ from werkzeug.utils import secure_filename
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "change-me-in-production"  # override with env in production
 app.config["DATABASE"] = os.path.join(os.path.dirname(__file__), "tenantlandlord.db")
-app.config["UPLOAD_FOLDER"] = os.path.join(app.root_path, "static", "uploads")
-
-ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
-
-os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -334,7 +327,6 @@ def init_db():
             status TEXT NOT NULL DEFAULT 'Open',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             priority TEXT NOT NULL DEFAULT 'Normal',
-            image_filename TEXT,
             FOREIGN KEY (tenant_id) REFERENCES users(id)
         );
         """
@@ -367,28 +359,6 @@ def ensure_maintenance_priority_column():
             logger.exception("Unexpected error while ensuring 'priority' column: %s", e)
 
 
-def ensure_maintenance_image_column():
-    """Ensure an image filename column exists for maintenance requests."""
-
-    db = get_db()
-    try:
-        logger.debug("Ensuring 'image_filename' column exists on maintenance_requests.")
-        db.execute(
-            "ALTER TABLE maintenance_requests "
-            "ADD COLUMN image_filename TEXT"
-        )
-        db.commit()
-        logger.info("Added 'image_filename' column to maintenance_requests table.")
-    except sqlite3.OperationalError as e:
-        msg = str(e)
-        if "duplicate column name" in msg or "already exists" in msg:
-            logger.debug(
-                "'image_filename' column already exists on maintenance_requests; no migration needed."
-            )
-        else:
-            logger.exception("Unexpected error while ensuring 'image_filename' column: %s", e)
-
-
 def run_startup_migrations():
     """
     Run one-time startup migrations such as adding new columns.
@@ -397,7 +367,6 @@ def run_startup_migrations():
     """
     logger.debug("Running startup migrations at app startup.")
     ensure_maintenance_priority_column()
-    ensure_maintenance_image_column()
 
 
 with app.app_context():
@@ -449,15 +418,6 @@ def get_active_lease_for_tenant(tenant_id):
         "Active lease for tenant_id %s: %s", tenant_id, dict(lease) if lease else None
     )
     return lease
-
-
-def allowed_image_file(filename):
-    """Return True if the provided filename has an allowed image extension."""
-
-    if not filename or "." not in filename:
-        return False
-    ext = filename.rsplit(".", 1)[-1].lower()
-    return ext in ALLOWED_IMAGE_EXTENSIONS
 
 
 def get_rent_status_for_lease(lease_id, monthly_rent, month, year):
@@ -835,8 +795,6 @@ def new_request():
         title = request.form.get("title", "").strip()
         description = request.form.get("description", "").strip()
         priority = request.form.get("priority", "Normal").strip() or "Normal"
-        image_file = request.files.get("image")
-        image_filename = None
         logger.debug(
             "New maintenance request submission by tenant id=%s, title='%s', priority='%s'",
             user["id"],
@@ -853,32 +811,12 @@ def new_request():
 
         if not title or not description:
             flash("Please fill in both title and description.", "warning")
-        elif image_file and image_file.filename and not allowed_image_file(image_file.filename):
-            flash("Image must be a PNG, JPG, JPEG, GIF, or WEBP file.", "warning")
-            logger.warning(
-                "Rejected maintenance request image with invalid extension for tenant id=%s",
-                user["id"],
-            )
         else:
-            if image_file and image_file.filename:
-                safe_name = secure_filename(image_file.filename)
-                image_filename = f"{uuid.uuid4().hex}_{safe_name}"
-                save_path = os.path.join(app.config["UPLOAD_FOLDER"], image_filename)
-                image_file.save(save_path)
-                logger.debug(
-                    "Saved maintenance request image for tenant id=%s to %s",
-                    user["id"],
-                    save_path,
-                )
-
             db = get_db()
             db.execute(
-                """
-                INSERT INTO maintenance_requests (
-                    tenant_id, title, description, status, priority, image_filename
-                ) VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                (user["id"], title, description, "Open", priority, image_filename),
+                "INSERT INTO maintenance_requests (tenant_id, title, description, status, priority) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (user["id"], title, description, "Open", priority),
             )
             db.commit()
             logger.info(
