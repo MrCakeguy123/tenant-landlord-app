@@ -3,6 +3,7 @@
   <section class="card">
     <h1>{{ t('maintenance_new') }}</h1>
     <form method="post" action="{{ url_for('new_request') }}" class="form" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
       <label>
         {{ t('col_title') }}
         <input type="text" name="title" required>

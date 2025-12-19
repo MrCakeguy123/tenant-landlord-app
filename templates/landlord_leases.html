@@ -31,6 +31,7 @@
               <td>{% if l.is_active %}{{ t('yes') }}{% else %}{{ t('no') }}{% endif %}</td>
               <td>
                 <form method="post" action="{{ url_for('landlord_toggle_lease', lease_id=l.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                   <button class="button small" type="submit">
                     {% if l.is_active %}{{ t('announcements_deactivate') }}{% else %}{{ t('announcements_activate') }}{% endif %}
                   </button>

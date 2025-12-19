@@ -38,11 +38,13 @@
               </td>
               <td>
                 <form method="post" action="{{ url_for('landlord_toggle_announcement', announcement_id=a.id) }}" style="display:inline;">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                   <button class="button small" type="submit">
                     {% if a.is_active %}{{ t('announcements_deactivate') }}{% else %}{{ t('announcements_activate') }}{% endif %}
                   </button>
                 </form>
                 <form method="post" action="{{ url_for('landlord_delete_announcement', announcement_id=a.id) }}" style="display:inline;" onsubmit="return confirm('{{ t('announcements_delete_confirm') }}');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                   <button class="button small danger" type="submit">{{ t('announcements_delete') }}</button>
                 </form>
               </td>

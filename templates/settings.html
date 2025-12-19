@@ -8,6 +8,7 @@
   <section class="card">
     <h2>{{ t('settings_profile') }}</h2>
     <form method="post" action="{{ url_for('update_profile') }}" class="form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
       <label>
         {{ t('settings_username') }}
         <input type="text" value="{{ user.username }}" disabled>
@@ -32,6 +33,7 @@
   <section class="card">
     <h2>{{ t('settings_password') }}</h2>
     <form method="post" action="{{ url_for('change_password') }}" class="form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
       <label>
         {{ t('settings_current_password') }}
         <input type="password" name="current_password" required>

@@ -7,6 +7,7 @@
     </p>
 
     <form method="post" action="{{ url_for('landlord_new_lease') }}" class="form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
       <label>
         {{ t('col_tenant') }}
         <select name="tenant_id" required>
