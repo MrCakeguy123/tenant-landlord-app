@@ -1,4 +1,7 @@
 Flask
+Flask-Limiter
+Flask-WTF
+Flask-Talisman
 gunicorn
 stripe
 requests
