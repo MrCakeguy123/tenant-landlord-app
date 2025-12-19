@@ -4,10 +4,15 @@ import logging
 import datetime
 import json
 import calendar
+import secrets
 
 import requests
 import stripe
 from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_wtf.csrf import CSRFProtect
+from flask_talisman import Talisman
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
@@ -19,8 +24,27 @@ from supabase_client import get_supabase, get_supabase_url, STORAGE_BUCKET
 # -----------------------
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "change-me-in-production")
+
+# Security: Generate secure SECRET_KEY if not provided
+if not os.environ.get("SECRET_KEY"):
+    logger_temp = logging.getLogger(__name__)
+    logger_temp.warning(
+        "SECRET_KEY not set in environment. Using auto-generated key. "
+        "Set SECRET_KEY environment variable for production use."
+    )
+    app.config["SECRET_KEY"] = secrets.token_hex(32)
+else:
+    app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
+
+# File upload configuration
 app.config["UPLOAD_FOLDER"] = os.path.join(app.root_path, "static", "uploads")
+app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # 5MB max file size
+
+# Session security
+app.config["SESSION_COOKIE_SECURE"] = os.environ.get("FLASK_ENV") == "production"
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["PERMANENT_SESSION_LIFETIME"] = datetime.timedelta(minutes=30)
 
 ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 
@@ -31,6 +55,33 @@ logging.basicConfig(
     format="[%(asctime)s] %(levelname)s in %(module)s: %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+# Security: Initialize CSRF Protection
+csrf = CSRFProtect(app)
+
+# Security: Initialize Rate Limiter
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://",
+)
+
+# Security: HTTPS enforcement in production (disabled in development)
+if os.environ.get("FLASK_ENV") == "production":
+    Talisman(
+        app,
+        force_https=True,
+        strict_transport_security=True,
+        content_security_policy={
+            'default-src': "'self'",
+            'script-src': ["'self'", "'unsafe-inline'", "js.stripe.com"],
+            'style-src': ["'self'", "'unsafe-inline'"],
+            'img-src': ["'self'", "data:", "*.supabase.co"],
+            'connect-src': ["'self'", "*.supabase.co", "api.stripe.com"],
+            'frame-src': ["js.stripe.com"],
+        }
+    )
 
 
 # -----------------------
@@ -650,6 +701,7 @@ def login_user(user):
     session.clear()
     session["user_id"] = user["id"]
     session["role"] = user["role"]
+    session.permanent = True  # Enable session timeout
     logger.info(
         "User %s (id=%s, role=%s) logged in.",
         user["username"],
@@ -707,6 +759,7 @@ def index():
 
 
 @app.route("/setup", methods=["GET", "POST"])
+@limiter.limit("5 per minute")  # Prevent abuse
 def setup():
     """Initial setup route to create a landlord and a tenant."""
     logger.debug("Setup route accessed with method=%s", request.method)
@@ -804,6 +857,7 @@ def setup():
 
 
 @app.route("/login", methods=["GET", "POST"])
+@limiter.limit("10 per minute")  # Prevent brute force attacks
 def login():
     logger.debug("Login route accessed with method=%s", request.method)
     if request.method == "POST":
@@ -1312,6 +1366,7 @@ def tenant_stripe_cancel():
 
 
 @app.route("/stripe/webhook", methods=["POST"])
+@csrf.exempt  # Webhooks don't have CSRF tokens
 def stripe_webhook():
     """
     Stripe webhook endpoint to record successful card payments into rent_payments.
