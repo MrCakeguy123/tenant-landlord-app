@@ -5,6 +5,9 @@ import datetime
 import json
 import calendar
 import secrets
+import imghdr
+import re
+from urllib.parse import urljoin, urlparse
 
 import requests
 import stripe
@@ -47,6 +50,8 @@ app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["PERMANENT_SESSION_LIFETIME"] = datetime.timedelta(minutes=30)
 
 ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
+ALLOWED_IMAGE_TYPES = {"png", "jpg", "jpeg", "gif", "webp"}
+PASSWORD_MIN_LENGTH = 8
 
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
@@ -82,6 +87,15 @@ if os.environ.get("FLASK_ENV") == "production":
             'frame-src': ["js.stripe.com"],
         }
     )
+
+
+@app.after_request
+def apply_security_headers(response):
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
+    return response
 
 
 # -----------------------
@@ -485,9 +499,23 @@ def upload_image_to_storage(file, filename):
         
         # Read file content
         file_content = file.read()
+        if not file_content:
+            logger.warning("Uploaded image is empty for filename=%s", filename)
+            return None
         
         # Determine content type
         ext = filename.rsplit(".", 1)[-1].lower()
+        detected_type = imghdr.what(None, h=file_content)
+        if detected_type == "jpeg":
+            detected_type = "jpg"
+        if ext not in ALLOWED_IMAGE_EXTENSIONS or detected_type not in ALLOWED_IMAGE_TYPES:
+            logger.warning(
+                "Rejected upload with filename=%s ext=%s detected_type=%s",
+                filename,
+                ext,
+                detected_type,
+            )
+            return None
         content_types = {
             "png": "image/png",
             "jpg": "image/jpeg",
@@ -610,6 +638,30 @@ def allowed_image_file(filename):
         return False
     ext = filename.rsplit(".", 1)[-1].lower()
     return ext in ALLOWED_IMAGE_EXTENSIONS
+
+
+def is_safe_redirect_url(target):
+    """Ensure redirect targets stay within this host to prevent open redirects."""
+    if not target:
+        return False
+    ref_url = urlparse(request.host_url)
+    test_url = urlparse(urljoin(request.host_url, target))
+    return test_url.scheme in ("http", "https") and ref_url.netloc == test_url.netloc
+
+
+def password_strength_message(password):
+    """Return a validation message if password is weak; otherwise None."""
+    if len(password) < PASSWORD_MIN_LENGTH:
+        return f"Password must be at least {PASSWORD_MIN_LENGTH} characters."
+    if not re.search(r"[a-z]", password):
+        return "Password must include a lowercase letter."
+    if not re.search(r"[A-Z]", password):
+        return "Password must include an uppercase letter."
+    if not re.search(r"\d", password):
+        return "Password must include a number."
+    if not re.search(r"[^\w\s]", password):
+        return "Password must include a symbol."
+    return None
 
 
 def get_rent_status_for_lease(lease_id, monthly_rent, month, year):
@@ -801,6 +853,16 @@ def setup():
                 flash("Please fill in all required fields.", "warning")
                 return render_template("setup.html")
 
+            landlord_password_message = password_strength_message(landlord_password)
+            if landlord_password_message:
+                flash(f"Landlord password: {landlord_password_message}", "warning")
+                return render_template("setup.html")
+
+            tenant_password_message = password_strength_message(tenant_password)
+            if tenant_password_message:
+                flash(f"Tenant password: {tenant_password_message}", "warning")
+                return render_template("setup.html")
+
             try:
                 monthly_rent = float(monthly_rent_raw)
                 due_day = int(due_day_raw)
@@ -893,6 +955,9 @@ def login():
                 
                 login_user(user)
                 next_page = request.args.get("next")
+                if next_page and not is_safe_redirect_url(next_page):
+                    logger.warning("Blocked unsafe redirect target on login: %s", next_page)
+                    next_page = None
                 logger.info(
                     "Login successful for username=%s; redirecting to %s",
                     username,
@@ -964,6 +1029,7 @@ def update_profile():
 
 
 @app.route("/settings/password", methods=["POST"])
+@limiter.limit("5 per minute")
 @login_required()
 def change_password():
     """Change user password."""
@@ -983,8 +1049,9 @@ def change_password():
         flash("New passwords do not match.", "warning")
         return redirect(url_for("settings"))
     
-    if len(new_password) < 6:
-        flash("New password must be at least 6 characters.", "warning")
+    password_message = password_strength_message(new_password)
+    if password_message:
+        flash(password_message, "warning")
         return redirect(url_for("settings"))
     
     # Verify current password
@@ -1759,6 +1826,11 @@ def landlord_new_tenant():
 
         if not username or not password:
             flash("Username and password are required.", "warning")
+            return render_template("landlord_tenant_form.html", user=user)
+
+        password_message = password_strength_message(password)
+        if password_message:
+            flash(password_message, "warning")
             return render_template("landlord_tenant_form.html", user=user)
 
         try:
