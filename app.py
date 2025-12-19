@@ -3,6 +3,7 @@ import uuid
 import logging
 import datetime
 import json
+import calendar
 
 import requests
 import stripe
@@ -2032,7 +2033,8 @@ def calendar_events():
                 for i in range(12):
                     month = (today.month + i - 1) % 12 + 1
                     year = today.year + ((today.month + i - 1) // 12)
-                    due_day = min(lease["due_day"], 28)  # Handle short months
+                    last_day = calendar.monthrange(year, month)[1]
+                    due_day = min(lease["due_day"], last_day)
                     due_date = datetime.date(year, month, due_day)
                     
                     events.append({
@@ -2103,7 +2105,8 @@ def calendar_events():
                 for i in range(12):
                     month = (today.month + i - 1) % 12 + 1
                     year = today.year + ((today.month + i - 1) // 12)
-                    due_day = min(lease["due_day"], 28)
+                    last_day = calendar.monthrange(year, month)[1]
+                    due_day = min(lease["due_day"], last_day)
                     due_date = datetime.date(year, month, due_day)
                     
                     events.append({
