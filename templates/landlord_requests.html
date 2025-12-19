@@ -66,6 +66,7 @@
               </td>
               <td>
                 <form method="post" action="{{ url_for('landlord_update_request_status', request_id=r.id) }}" style="display:inline;">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                   <select name="status">
                     <option value="Open" {% if r.status == 'Open' %}selected{% endif %}>{{ t('status_open') }}</option>
                     <option value="In progress" {% if r.status == 'In progress' %}selected{% endif %}>{{ t('status_in_progress') }}</option>
@@ -74,6 +75,7 @@
                   <button class="button small" type="submit">{{ t('btn_save') }}</button>
                 </form>
                 <form method="post" action="{{ url_for('landlord_delete_request', request_id=r.id) }}" style="display:inline;" onsubmit="return confirm('{{ t('maintenance_delete_confirm') }}');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                   <button class="button small danger" type="submit">{{ t('maintenance_delete') }}</button>
                 </form>
               </td>

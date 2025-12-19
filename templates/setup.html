@@ -5,6 +5,7 @@
     <p>{{ t('setup_subtitle') }}</p>
 
     <form method="post" action="{{ url_for('setup') }}" class="form form-grid">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
       <div class="form-column">
         <h2>{{ t('setup_landlord') }}</h2>
         <label>
