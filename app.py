@@ -2278,7 +2278,7 @@ def log_analytics():
             # Log the full error for debugging
             logger.error("Analytics database error for user %s: %s", user_id, str(db_error), exc_info=True)
             logger.info("Analytics data attempted: %s", analytics_data)
-            return {"status": "error", "message": str(db_error)}, 200
+            return {"status": "error", "message": "Failed to log analytics due to a server error."}, 500
 
     except Exception as e:
         logger.error("Error logging analytics: %s", e)
