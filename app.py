@@ -5,7 +5,6 @@ import datetime
 import json
 import calendar
 import secrets
-import imghdr
 import re
 from urllib.parse import urljoin, urlparse
 
@@ -50,7 +49,6 @@ app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["PERMANENT_SESSION_LIFETIME"] = datetime.timedelta(minutes=30)
 
 ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
-ALLOWED_IMAGE_TYPES = {"png", "jpg", "jpeg", "gif", "webp"}
 PASSWORD_MIN_LENGTH = 8
 
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
@@ -503,17 +501,13 @@ def upload_image_to_storage(file, filename):
             logger.warning("Uploaded image is empty for filename=%s", filename)
             return None
         
-        # Determine content type
-        ext = filename.rsplit(".", 1)[-1].lower()
-        detected_type = imghdr.what(None, h=file_content)
-        if detected_type == "jpeg":
-            detected_type = "jpg"
-        if ext not in ALLOWED_IMAGE_EXTENSIONS or detected_type not in ALLOWED_IMAGE_TYPES:
+        # Validate file extension
+        ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+        if ext not in ALLOWED_IMAGE_EXTENSIONS:
             logger.warning(
-                "Rejected upload with filename=%s ext=%s detected_type=%s",
+                "Rejected upload with filename=%s ext=%s (not in allowed extensions)",
                 filename,
                 ext,
-                detected_type,
             )
             return None
         content_types = {
