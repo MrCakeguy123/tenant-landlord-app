@@ -20,6 +20,13 @@ from supabase_client import get_supabase, get_supabase_url, STORAGE_BUCKET
 
 
 # -----------------------
+# App Configuration
+# -----------------------
+
+# Application version
+APP_VERSION = "1.0.0"
+
+# -----------------------
 # App & Logging Setup
 # -----------------------
 
@@ -439,6 +446,12 @@ def translate_text_deepl(text, target_lang):
 def inject_i18n():
     """Make translation helper and language info available in all templates."""
     return {"t": translate_ui, "current_lang": get_lang(), "supported_langs": SUPPORTED_LANGS}
+
+
+@app.context_processor
+def inject_app_info():
+    """Make app version available to all templates."""
+    return {"app_version": APP_VERSION}
 
 
 @app.route("/set-language/<lang>")
@@ -2218,10 +2231,120 @@ def calendar_events():
                     })
         
         return {"events": events}
-    
+
     except Exception as e:
         logger.exception("Error fetching calendar events: %s", e)
         return {"events": [], "error": str(e)}
+
+
+@app.route("/api/log-analytics", methods=["POST"])
+def log_analytics():
+    """Log user analytics data (browser, OS, device info)."""
+    try:
+        data = request.get_json()
+
+        # Only log if user is logged in
+        user_id = session.get("user_id")
+        if not user_id:
+            return {"status": "skipped", "message": "Not logged in"}, 200
+
+        supabase = require_supabase()
+
+        # Create analytics record
+        analytics_data = {
+            "user_id": user_id,
+            "browser": data.get("browser", "Unknown"),
+            "os": data.get("os", "Unknown"),
+            "device_type": data.get("device_type", "Unknown"),
+            "screen_width": data.get("screen_width"),
+            "screen_height": data.get("screen_height"),
+            "pixel_ratio": data.get("pixel_ratio"),
+            "user_agent": data.get("user_agent", ""),
+            "language": data.get("language", ""),
+            "page_url": request.referrer or "",
+            "timestamp": data.get("timestamp"),
+        }
+
+        # Try to insert into analytics table
+        # If table doesn't exist, create it on first run
+        try:
+            supabase.table("analytics").insert(analytics_data).execute()
+            logger.debug("Analytics logged for user %s: %s %s on %s",
+                        user_id, data.get("browser"), data.get("os"), data.get("device_type"))
+            return {"status": "success"}, 200
+        except Exception as db_error:
+            # If table doesn't exist, log to application logs instead
+            logger.info("Analytics data (table may not exist): user=%s browser=%s os=%s device=%s",
+                       user_id, data.get("browser"), data.get("os"), data.get("device_type"))
+            return {"status": "logged_to_file"}, 200
+
+    except Exception as e:
+        logger.error("Error logging analytics: %s", e)
+        return {"status": "error", "message": str(e)}, 500
+
+
+@app.route("/analytics")
+@login_required()
+def analytics_dashboard():
+    """View analytics dashboard (landlords only)."""
+    user = get_current_user()
+
+    # Only landlords can view analytics
+    if user["role"] != "landlord":
+        flash("Access denied. Only landlords can view analytics.", "error")
+        return redirect(url_for("dashboard"))
+
+    try:
+        supabase = require_supabase()
+
+        # Try to fetch analytics data
+        try:
+            # Get analytics for all users (landlord can see all)
+            analytics_resp = (
+                supabase.table("analytics")
+                .select("*")
+                .order("timestamp", desc=True)
+                .limit(500)
+                .execute()
+            )
+            analytics_data = analytics_resp.data or []
+
+            # Get unique users count
+            user_ids = set(a.get("user_id") for a in analytics_data if a.get("user_id"))
+
+            # Count by browser
+            browser_counts = {}
+            os_counts = {}
+            device_counts = {}
+
+            for entry in analytics_data:
+                browser = entry.get("browser", "Unknown")
+                os = entry.get("os", "Unknown")
+                device = entry.get("device_type", "Unknown")
+
+                browser_counts[browser] = browser_counts.get(browser, 0) + 1
+                os_counts[os] = os_counts.get(os, 0) + 1
+                device_counts[device] = device_counts.get(device, 0) + 1
+
+            stats = {
+                "total_sessions": len(analytics_data),
+                "unique_users": len(user_ids),
+                "browser_counts": browser_counts,
+                "os_counts": os_counts,
+                "device_counts": device_counts,
+            }
+
+            return render_template("analytics.html", user=user, analytics=analytics_data[:100], stats=stats)
+
+        except Exception as db_error:
+            logger.warning("Analytics table may not exist: %s", db_error)
+            flash("Analytics table not set up yet. Analytics data will be collected once the database table is created.", "info")
+            return render_template("analytics.html", user=user, analytics=[], stats=None)
+
+    except Exception as e:
+        logger.exception("Error loading analytics dashboard: %s", e)
+        flash("Error loading analytics data.", "error")
+        return redirect(url_for("dashboard"))
 
 
 # -----------------------
