@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="card">
+    <h1>📊 Analytics Dashboard</h1>
+    <p class="subtitle">View browser, OS, and device statistics for your platform</p>
+
+    <p>
+      <a class="button" href="{{ url_for('dashboard') }}">← Back to Dashboard</a>
+    </p>
+
+    {% if stats %}
+      <div class="summary-row">
+        <div class="summary-card">
+          <div class="summary-label">Total Sessions</div>
+          <div class="summary-value">{{ stats.total_sessions }}</div>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-label">Unique Users</div>
+          <div class="summary-value">{{ stats.unique_users }}</div>
+        </div>
+      </div>
+    {% endif %}
+  </section>
+
+  {% if stats %}
+    <!-- Browser Statistics -->
+    <section class="card">
+      <h2>🌐 Browser Statistics</h2>
+
+      {% if stats.browser_counts %}
+        <div class="table-wrapper">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Browser</th>
+              <th>Sessions</th>
+              <th>Percentage</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for browser, count in stats.browser_counts.items()|sort(attribute='1', reverse=True) %}
+              <tr>
+                <td><strong>{{ browser }}</strong></td>
+                <td>{{ count }}</td>
+                <td>{{ "%.1f"|format((count / stats.total_sessions * 100) if stats.total_sessions > 0 else 0) }}%</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        </div>
+      {% else %}
+        <p class="muted-text">No browser data available yet.</p>
+      {% endif %}
+    </section>
+
+    <!-- Operating System Statistics -->
+    <section class="card">
+      <h2>🖥️ Operating System Statistics</h2>
+
+      {% if stats.os_counts %}
+        <div class="table-wrapper">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Operating System</th>
+              <th>Sessions</th>
+              <th>Percentage</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for os, count in stats.os_counts.items()|sort(attribute='1', reverse=True) %}
+              <tr>
+                <td><strong>{{ os }}</strong></td>
+                <td>{{ count }}</td>
+                <td>{{ "%.1f"|format((count / stats.total_sessions * 100) if stats.total_sessions > 0 else 0) }}%</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        </div>
+      {% else %}
+        <p class="muted-text">No operating system data available yet.</p>
+      {% endif %}
+    </section>
+
+    <!-- Device Type Statistics -->
+    <section class="card">
+      <h2>📱 Device Type Statistics</h2>
+
+      {% if stats.device_counts %}
+        <div class="table-wrapper">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Device Type</th>
+              <th>Sessions</th>
+              <th>Percentage</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for device, count in stats.device_counts.items()|sort(attribute='1', reverse=True) %}
+              <tr>
+                <td><strong>{{ device }}</strong></td>
+                <td>{{ count }}</td>
+                <td>{{ "%.1f"|format((count / stats.total_sessions * 100) if stats.total_sessions > 0 else 0) }}%</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        </div>
+      {% else %}
+        <p class="muted-text">No device data available yet.</p>
+      {% endif %}
+    </section>
+
+    <!-- Recent Sessions -->
+    <section class="card">
+      <h2>🕐 Recent Sessions (Last 100)</h2>
+
+      {% if analytics %}
+        <div class="table-wrapper">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Browser</th>
+              <th>OS</th>
+              <th>Device</th>
+              <th>Screen</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for entry in analytics %}
+              <tr>
+                <td>{{ entry.timestamp[:19] if entry.timestamp else 'N/A' }}</td>
+                <td>{{ entry.browser }}</td>
+                <td>{{ entry.os }}</td>
+                <td>{{ entry.device_type }}</td>
+                <td>{{ entry.screen_width }}×{{ entry.screen_height }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        </div>
+      {% else %}
+        <p class="muted-text">No session data available yet.</p>
+      {% endif %}
+    </section>
+  {% else %}
+    <section class="card">
+      <h2>⚙️ Setup Required</h2>
+      <p>The analytics table needs to be created in your Supabase database. Analytics data will be collected automatically once the table is set up.</p>
+
+      <h3>Database Setup Instructions</h3>
+      <p>Run this SQL in your Supabase SQL Editor:</p>
+
+      <pre style="background: var(--bg-input); padding: 1rem; border-radius: 0.75rem; overflow-x: auto; font-size: 0.875rem;">
+CREATE TABLE IF NOT EXISTS analytics (
+  id BIGSERIAL PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  browser TEXT,
+  os TEXT,
+  device_type TEXT,
+  screen_width INTEGER,
+  screen_height INTEGER,
+  pixel_ratio DECIMAL,
+  user_agent TEXT,
+  language TEXT,
+  page_url TEXT,
+  timestamp TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Create index for faster queries
+CREATE INDEX IF NOT EXISTS idx_analytics_user_id ON analytics(user_id);
+CREATE INDEX IF NOT EXISTS idx_analytics_timestamp ON analytics(timestamp DESC);
+
+-- Enable Row Level Security
+ALTER TABLE analytics ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Users can insert their own analytics
+CREATE POLICY "Users can insert their own analytics"
+  ON analytics FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- Policy: Landlords can view all analytics
+CREATE POLICY "Landlords can view all analytics"
+  ON analytics FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM auth.users
+      WHERE auth.users.id = auth.uid()
+      AND auth.users.raw_user_meta_data->>'role' = 'landlord'
+    )
+  );
+      </pre>
+
+      <p style="margin-top: 1.5rem;">
+        <a class="button primary" href="{{ url_for('analytics_dashboard') }}">Refresh Page</a>
+      </p>
+    </section>
+  {% endif %}
+
+{% endblock %}

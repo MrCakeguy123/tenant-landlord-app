@@ -76,6 +76,31 @@
       {% block content %}{% endblock %}
     </main>
 
+    <!-- Footer with version and system info -->
+    <footer class="app-footer">
+      <div class="footer-inner">
+        <div class="footer-section">
+          <span class="footer-label">Version:</span>
+          <span class="footer-value">v{{ app_version }}</span>
+        </div>
+        <div class="footer-section">
+          <span id="footer-browser" class="footer-value">🔵 Detecting...</span>
+        </div>
+        <div class="footer-section">
+          <span id="footer-os" class="footer-value">🖥️ Detecting...</span>
+        </div>
+        <div class="footer-section">
+          <span id="footer-device" class="footer-value">📱 Detecting...</span>
+        </div>
+        <div class="footer-section">
+          <span id="footer-screen" class="footer-value">🖥️ Detecting...</span>
+        </div>
+      </div>
+    </footer>
+
+    <!-- System information detection -->
+    <script src="{{ url_for('static', filename='system-info.js') }}"></script>
+
     <!-- Dark mode toggle script -->
     <script>
       function toggleTheme() {
