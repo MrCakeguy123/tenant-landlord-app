@@ -79,6 +79,7 @@
 
       <h3>{{ t('rent_recent_payments') }}</h3>
       {% if recent_payments %}
+        <div class="table-wrapper">
         <table class="table">
           <thead>
             <tr>
@@ -103,6 +104,7 @@
             {% endfor %}
           </tbody>
         </table>
+        </div>
       {% else %}
         <p>{{ t('rent_no_payments') }}</p>
       {% endif %}
@@ -115,6 +117,7 @@
     <h2>{{ t('maintenance_requests') }}</h2>
     <p><a class="button primary" href="{{ url_for('new_request') }}">{{ t('maintenance_submit_new') }}</a></p>
     {% if requests %}
+      <div class="table-wrapper">
       <table class="table">
         <thead>
           <tr>
@@ -169,6 +172,7 @@
           {% endfor %}
         </tbody>
       </table>
+      </div>
     {% else %}
       <p>{{ t('maintenance_none') }}</p>
     {% endif %}

@@ -78,6 +78,86 @@
   --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.6), 0 8px 20px rgba(0, 0, 0, 0.4);
 }
 
+/* ---------- Animations & Keyframes ---------- */
+
+/* Fade in animation for page load */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Slide up animation for cards */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Slide down for topbar */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Scale in for buttons and badges */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Pulse animation for emergency items */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.02);
+  }
+}
+
+/* Bounce animation for notifications */
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* Shimmer loading animation */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
 /* ---------- Base Styles ---------- */
 
 *,
@@ -96,12 +176,14 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  animation: fadeIn 0.6s ease-out;
 }
 
 .container {
   max-width: 1100px;
   margin: 2.5rem auto 3rem;
   padding: 0 1.5rem;
+  animation: fadeIn 0.8s ease-out;
 }
 
 @media (max-width: 768px) {
@@ -138,6 +220,7 @@ a:hover {
   z-index: 100;
   transition: all var(--transition-base);
   box-shadow: var(--shadow-sm);
+  animation: slideDown 0.5s ease-out;
 }
 
 .topbar-inner {
@@ -256,7 +339,14 @@ a:hover {
   transition: all var(--transition-base);
   position: relative;
   overflow: hidden;
+  animation: slideUp 0.6s ease-out backwards;
 }
+
+.card:nth-child(1) { animation-delay: 0.1s; }
+.card:nth-child(2) { animation-delay: 0.2s; }
+.card:nth-child(3) { animation-delay: 0.3s; }
+.card:nth-child(4) { animation-delay: 0.4s; }
+.card:nth-child(5) { animation-delay: 0.5s; }
 
 .card::before {
   content: '';
@@ -488,14 +578,25 @@ h3 {
 
 /* ---------- Tables ---------- */
 
+/* Table wrapper for horizontal scrolling on mobile */
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-top: 1.5rem;
+  border-radius: 1rem;
+  box-shadow: var(--shadow-sm);
+}
+
 .table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  margin-top: 1.5rem;
+  margin-top: 0;
   font-size: 0.9375rem;
   overflow: hidden;
   border-radius: 1rem;
+  min-width: 600px; /* Force horizontal scroll on small screens */
 }
 
 .table th,
@@ -567,7 +668,13 @@ h3 {
   transition: all var(--transition-base);
   position: relative;
   overflow: hidden;
+  animation: scaleIn 0.5s ease-out backwards;
 }
+
+.summary-card:nth-child(1) { animation-delay: 0.1s; }
+.summary-card:nth-child(2) { animation-delay: 0.2s; }
+.summary-card:nth-child(3) { animation-delay: 0.3s; }
+.summary-card:nth-child(4) { animation-delay: 0.4s; }
 
 .summary-card::before {
   content: '';

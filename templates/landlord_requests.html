@@ -4,6 +4,7 @@
     <h1>{{ t('landlord_all_requests') }}</h1>
 
     {% if requests %}
+      <div class="table-wrapper">
       <table class="table">
         <thead>
           <tr>
@@ -83,6 +84,7 @@
           {% endfor %}
         </tbody>
       </table>
+      </div>
     {% else %}
       <p>{{ t('landlord_no_requests') }}</p>
     {% endif %}

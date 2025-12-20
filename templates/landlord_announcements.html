@@ -11,6 +11,7 @@
 
   <section class="card">
     {% if announcements %}
+      <div class="table-wrapper">
       <table class="table">
         <thead>
           <tr>
@@ -52,6 +53,7 @@
           {% endfor %}
         </tbody>
       </table>
+      </div>
     {% else %}
       <p>{{ t('announcements_none') }}</p>
     {% endif %}
