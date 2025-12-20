@@ -2318,8 +2318,9 @@ def log_analytics():
         supabase = require_supabase()
 
         # Create analytics record
+        # Convert user_id to string to ensure compatibility with UUID
         analytics_data = {
-            "user_id": user_id,
+            "user_id": str(user_id),
             "browser": data.get("browser", "Unknown"),
             "os": data.get("os", "Unknown"),
             "device_type": data.get("device_type", "Unknown"),
@@ -2349,6 +2350,61 @@ def log_analytics():
     except Exception as e:
         logger.error("Error logging analytics: %s", e)
         return {"status": "error", "message": str(e)}, 500
+
+
+@app.route("/api/test-analytics")
+@csrf.exempt
+def test_analytics():
+    """Debug endpoint to test analytics setup."""
+    user_id = session.get("user_id")
+
+    if not user_id:
+        return {
+            "status": "error",
+            "message": "Not logged in",
+            "user_id": None
+        }, 401
+
+    try:
+        supabase = require_supabase()
+
+        # Test data
+        test_data = {
+            "user_id": str(user_id),
+            "browser": "Test Browser",
+            "os": "Test OS",
+            "device_type": "Test Device",
+            "screen_width": 1920,
+            "screen_height": 1080,
+            "pixel_ratio": 1.0,
+            "user_agent": "Test User Agent",
+            "language": "en-US",
+            "page_url": "/test",
+            "timestamp": datetime.datetime.now().isoformat(),
+        }
+
+        logger.info("Test analytics attempt with data: %s", test_data)
+
+        # Try to insert
+        result = supabase.table("analytics").insert(test_data).execute()
+
+        return {
+            "status": "success",
+            "message": "Test analytics inserted successfully",
+            "user_id": str(user_id),
+            "user_id_type": type(user_id).__name__,
+            "result_data": result.data if hasattr(result, 'data') else None
+        }, 200
+
+    except Exception as e:
+        logger.error("Test analytics error: %s", str(e), exc_info=True)
+        return {
+            "status": "error",
+            "message": str(e),
+            "error_type": type(e).__name__,
+            "user_id": str(user_id) if user_id else None,
+            "user_id_type": type(user_id).__name__ if user_id else None
+        }, 500
 
 
 @app.route("/analytics")
