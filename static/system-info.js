@@ -200,8 +200,11 @@
                        !window.location.pathname.includes('/setup');
 
     if (!isLoggedIn) {
+      console.debug('Analytics: Skipping (not logged in)');
       return;
     }
+
+    console.debug('Analytics: Sending data:', data);
 
     fetch('/api/log-analytics', {
       method: 'POST',
@@ -209,9 +212,19 @@
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(data)
-    }).catch(function(error) {
-      // Silently fail - analytics shouldn't break the app
-      console.debug('Analytics logging failed:', error);
+    })
+    .then(function(response) {
+      if (response.ok) {
+        return response.json();
+      }
+      throw new Error('Analytics response not OK: ' + response.status);
+    })
+    .then(function(result) {
+      console.debug('Analytics logged successfully:', result);
+    })
+    .catch(function(error) {
+      // Log errors for debugging but don't break the app
+      console.error('Analytics logging failed:', error);
     });
   }
 

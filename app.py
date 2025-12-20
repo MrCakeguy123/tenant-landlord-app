@@ -2238,6 +2238,7 @@ def calendar_events():
 
 
 @app.route("/api/log-analytics", methods=["POST"])
+@csrf.exempt
 def log_analytics():
     """Log user analytics data (browser, OS, device info)."""
     try:
@@ -2268,15 +2269,16 @@ def log_analytics():
         # Try to insert into analytics table
         # If table doesn't exist, create it on first run
         try:
-            supabase.table("analytics").insert(analytics_data).execute()
-            logger.debug("Analytics logged for user %s: %s %s on %s",
-                        user_id, data.get("browser"), data.get("os"), data.get("device_type"))
+            logger.info("Attempting to insert analytics for user %s: %s %s on %s",
+                       user_id, data.get("browser"), data.get("os"), data.get("device_type"))
+            result = supabase.table("analytics").insert(analytics_data).execute()
+            logger.info("Analytics logged successfully for user %s, result: %s", user_id, result)
             return {"status": "success"}, 200
         except Exception as db_error:
-            # If table doesn't exist, log to application logs instead
-            logger.info("Analytics data (table may not exist): user=%s browser=%s os=%s device=%s",
-                       user_id, data.get("browser"), data.get("os"), data.get("device_type"))
-            return {"status": "logged_to_file"}, 200
+            # Log the full error for debugging
+            logger.error("Analytics database error for user %s: %s", user_id, str(db_error), exc_info=True)
+            logger.info("Analytics data attempted: %s", analytics_data)
+            return {"status": "error", "message": str(db_error)}, 200
 
     except Exception as e:
         logger.error("Error logging analytics: %s", e)
